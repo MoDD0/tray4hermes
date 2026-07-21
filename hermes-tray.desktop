@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Hermes Tray
+Comment=Hermes Gateway system tray monitor
+Exec=/home/moddo/dev/tray4hermes/run.sh
+Icon=utilities-system-monitor
+Terminal=false
+Categories=Utility;
+X-GNOME-Autostart-enabled=true
