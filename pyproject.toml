@@ -1,0 +1,120 @@
+# tray4hermes — pyproject.toml
+# PEP 621 metadata, uv-friendly, exact-pinned dependencies.
+# Style mirrors hermes-agent/pyproject.toml: exact pins (no ranges) to
+# minimize supply-chain blast radius (cf. Mini Shai-Hulud worm rationale in
+# the upstream file).
+
+[build-system]
+requires = ["setuptools>=77.0,<83"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tray4hermes"
+version = "2.0.0"
+description = "Passive KDE/Plasma tray monitor for Hermes Gateway (Nous Research Hermes Agent)"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "MoDDO" },
+]
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["hermes", "hermes-agent", "tray", "kde", "plasma", "system-tray"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: X11 Applications",
+  "Intended Audience :: End Users/Desktop",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Utilities",
+]
+# Exact pins only — no ranges. See hermes-agent pyproject.toml for rationale.
+dependencies = [
+  # Qt GUI bindings — cp38-abi3 wheel, works on every supported Python.
+  # Qt5 LTS is the only branch packaged for KDE Plasma 5 (Plasma 6 uses Qt6).
+  "PyQt5==5.15.11",
+]
+
+[project.optional-dependencies]
+dev = [
+  # Test framework + Qt event loop driver (offscreen platform for CI).
+  "pytest==9.0.0",
+  "pytest-qt==4.5.0",
+  # Lint + format — single tool, replaces black/isort/pyupgrade.
+  "ruff==0.14.0",
+  # Security linter for Python source.
+  "bandit==1.8.6",
+]
+
+[project.urls]
+Homepage = "https://forgejo.he1.co/HERMbuddy/tray4hermes"
+Repository = "https://forgejo.he1.co/HERMbuddy/tray4hermes.git"
+Issues = "https://forgejo.he1.co/HERMbuddy/tray4hermes/issues"
+
+[project.scripts]
+tray4hermes = "tray4hermes.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"tray4hermes" = ["py.typed"]
+
+# ── pytest ──────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = ["tests"]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+]
+# Qt tests need an offscreen platform in headless environments (CI, sandbox).
+# `pytest-qt` reads this automatically.
+env = ["QT_QPA_PLATFORM = offscreen"]
+
+# ── ruff ────────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", "build", "dist"]
+
+[tool.ruff.lint]
+# Conservative defaults: pycodestyle, pyflakes, isort, pyupgrade, security.
+select = [
+  "E",  # pycodestyle errors
+  "W",  # pycodestyle warnings
+  "F",  # pyflakes
+  "I",  # isort
+  "UP", # pyupgrade
+  "B",  # bugbear (common pitfalls)
+  "S",  # bandit security (also runs via bandit CLI for full coverage)
+]
+ignore = [
+  "S101",  # `assert` — fine in tests, used heavily here
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]  # asserts + hardcoded test secrets are fine
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ── bandit ──────────────────────────────────────────────────────────────────
+# Belt-and-suspenders: ruff covers `S` rules, bandit adds AST-level checks
+# bandit does and ruff doesn't (e.g. hardcoded-password-string detection
+# across multi-line literals). All B403/B603/B607/B108 issues here are
+# false positives in our context — see noqa comments inline.
+[tool.bandit]
+exclude_dirs = [".venv", "build", "dist", "tests"]
+skips = [
+  "B101",  # `assert` — used in tests and as invariant checks
+  "B404",  # `import subprocess` — necessary for our systemd integration
+  "B603",  # subprocess without shell=True — all callers use static arg lists
+  "B607",  # partial executable path — all paths come from config or env, validated
+  "B108",  # /tmp usage — intentional, PID lock only, TRAY4HERMES_LOCK overridable
+]

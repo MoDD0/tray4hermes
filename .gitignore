@@ -1,9 +1,55 @@
+# Python build / cache
 __pycache__/
 *.py[cod]
 *.egg-info/
-.venv/
-venv/
 build/
 dist/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+
+# uv
+.uv-cache/
+uv.lock.local
+
+# Test artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+
+# Editor / OS
 *.swp
+*.swo
 .DS_Store
+.idea/
+.vscode/
+*.iml
+
+# ── Secrets — never commit, even by accident ────────────────────────────────
+# Belt-and-suspenders. tray4hermes itself writes only to
+# ~/.config/tray4hermes/state.json (selected_profile + version), which lives
+# OUTSIDE the repo, but if you ever add a test fixture or fixture file that
+# contains a real token, these patterns catch it.
+*.token
+*.secret
+.env
+.env.*
+!.env.example
+secrets.toml
+secrets.yaml
+# The state file is per-user and lives under XDG_CONFIG_HOME; if you ever
+# accidentally drop one inside the repo, do not commit it.
+/state.json
+/.tray-state.json
+
+# Logs
+*.log
+
+# Stale archive directories (created by .archive/ during rebase / refactor)
+.archive/

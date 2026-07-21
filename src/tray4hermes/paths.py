@@ -1,0 +1,65 @@
+"""Path constants — single source of truth for every filesystem location.
+
+IMPORTANT: Path objects are wrapped in helper functions, not built at
+import time. This lets tests override ``HERMES_HOME`` / ``XDG_CONFIG_HOME``
+via ``monkeypatch.setenv`` and have the changes take effect. If you
+add a new path, wrap it in a function the same way — do not bind a
+``Path(...)`` at module level that reads an env var.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+# ── Tunables (pure values, safe at module level) ────────────────────────────
+SERVICE: str = "hermes-gateway.service"
+GATEWAY_STATE_MAX_AGE: int = 30  # seconds; older = ignored, fallback to systemd
+LOG_TAIL_BYTES: int = 256 * 1024  # how much of gateway.log the dialog reads
+REFRESH_INTERVAL_MS: int = 5000  # period between state polls
+LOG_REFRESH_INTERVAL_MS: int = 2000  # period between log-tail reads
+TRAY_STATE_VERSION: int = 1
+
+
+# ── Path resolvers (call these, don't import the Path directly) ─────────────
+def hermes_home() -> Path:
+    """``~/.hermes`` or whatever ``HERMES_HOME`` points to."""
+    return Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes"))
+
+
+def gateway_state() -> Path:
+    return hermes_home() / "gateway_state.json"
+
+
+def gateway_log() -> Path:
+    return hermes_home() / "logs" / "gateway.log"
+
+
+def profiles_dir() -> Path:
+    return hermes_home() / "profiles"
+
+
+def config_yaml() -> Path:
+    return hermes_home() / "config.yaml"
+
+
+def hermes_bin() -> Path:
+    return hermes_home() / "hermes-agent" / "venv" / "bin" / "hermes"
+
+
+def tray_config_dir() -> Path:
+    base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    return base / "tray4hermes"
+
+
+def tray_state_file() -> Path:
+    return tray_config_dir() / "state.json"
+
+
+def lock_file() -> Path:
+    # /tmp is fine here: the file holds only this process's PID; ownership
+    # is the process UID; and TRAY4HERMES_LOCK env var lets tests and
+    # paranoid users override the path.
+    return Path(
+        os.environ.get("TRAY4HERMES_LOCK", "/tmp/hermes-tray.lock")  # noqa: S108
+    )

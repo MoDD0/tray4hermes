@@ -1,116 +1,223 @@
 # tray4hermes
 
-Systémová lišta (KDE/Plasma tray) pro **Hermes Gateway** – nativní
-součást [Hermes Agent](https://hermes-agent.nousresearch.com/) od Nous
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
+Passive KDE/Plasma system-tray monitor and thin controller for
+**Hermes Gateway** — the messaging bridge that ships with
+[Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous
 Research.
 
-Tray je **pasivní observer a tenký controller** – nesahá na žádný
-soubor v `~/.hermes/`. Čte stav, logy a profily; ovládá jen
-`systemctl --user`; jediné místo, kam zapisuje, je
-`~/.config/tray4hermes/state.json`.
+> **tray4hermes is read-only with respect to Hermes Agent.** It controls
+> the gateway via `systemctl --user`, persists one small JSON file of its
+> own, and reads everything else. It does not store tokens, does not
+> configure providers, does not edit `~/.hermes/config.yaml`. All of
+> that lives in Hermes Agent itself.
 
-## Co umí
+---
 
-- Zobrazuje stav `hermes-gateway.service` v systémové liště (ikona podle stavu)
-- Start / Stop / Restart brány
-- Přepnutí aktivního profilu z menu (přes `hermes profile use`)
-- Log viewer s auto-refresh (tail `~/.hermes/logs/gateway.log`)
-- Otevření `~/.hermes/config.yaml` v externím editoru
-- Otevření Hermes CLI v novém terminálu
+## Features
 
-## Architektura
+- 📊 **Live status icon** in the system tray (green/orange/blue/grey/red)
+- ▶️ **Start / Stop / Restart** of `hermes-gateway.service`
+- 🔄 **Profile switcher** submenu (driven by `~/.hermes/profiles/`)
+- 📋 **Log viewer** with auto-refresh (tails `~/.hermes/logs/gateway.log`)
+- ⚙️ **Open Hermes config** in your default editor
+- 💻 **Launch Hermes CLI** in a new terminal
+
+## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Hermes Agent (~/dev/hermes-agent/, Nous Research)   │
-│  • hermes-gateway.service  (systemd --user)          │
-│  • Hermes Desktop          (Electron consumer)       │
-│  • CLI / TUI                                          │
+│  Hermes Agent (Nous Research)                         │
+│  • hermes-gateway.service   (systemd --user)         │
+│  • Hermes Desktop           (Electron consumer)      │
+│  • CLI / TUI / MCP / Plugins                          │
 └──────────────────────┬───────────────────────────────┘
-                       │ sdílí
+                       │ shares
                        ▼
-              ~/.hermes/    ←  jediný zdroj pravdy
+              ~/.hermes/    ←  single source of truth
               ├── config.yaml
               ├── auth.json
               ├── gateway_state.json
               ├── logs/gateway.log
               └── profiles/<name>/
                        ▲
-                       │ čte (read-only)
+                       │ reads (read-only)
 ┌──────────────────────┴───────────────────────────────┐
-│  tray4hermes  (~/dev/tray4hermes/)                   │
-│  • systray ikona  • Start/Stop/Restart               │
-│  • profily  • log viewer                             │
+│  tray4hermes  (this package)                          │
+│  • systray icon  • Start/Stop/Restart                │
+│  • profile switcher  • log viewer                    │
+│  • writes only: ~/.config/tray4hermes/state.json     │
 └──────────────────────────────────────────────────────┘
 ```
 
-## Požadavky
+The package has zero coupling to the Hermes Agent source code. It only
+knows about files in `~/.hermes/`, the systemd unit name, and the path
+to the `hermes` CLI. The tray can be uninstalled at any time without
+affecting the gateway.
 
-- Linux s KDE/Plasma (testováno na Manjaro)
-- Python 3.11+
-- PyQt5 (`pip install --user PyQt5`)
-- Běžící `hermes-gateway.service` pod `systemd --user`
-- `loginctl enable-linger $USER` (autostart po odhlášení)
+## State machine
 
-## Instalace
+The tray combines two sources of truth into six discrete states:
+
+| Code | Icon | Meaning |
+|------|------|---------|
+| `active` | 🟢 | Gateway running, at least one platform connected |
+| `warming` | 🟠 | Gateway running, credentials/platforms still initialising |
+| `activating` | 🔵 | systemd is starting the service |
+| `inactive` | ⚫ | Gateway stopped |
+| `failed` | 🔴 | systemd unit failed |
+| `unknown` | ⚫ | Cannot determine state (both sources unavailable) |
+
+`gateway_state.json` is the primary source when fresh (< 30 s old);
+`systemctl is-active` is the fallback. The two-source design avoids
+the OAuth warm-up race where the systemd unit shows `active` for a few
+seconds before the first model call actually succeeds.
+
+## Requirements
+
+- Linux with KDE Plasma 5 (Plasma 6 uses Qt6; tray4hermes is Qt5)
+- Python ≥ 3.11
+- Running `hermes-gateway.service` under `systemd --user`
+- `loginctl enable-linger $USER` for autostart after logout
+
+## Installation
+
+### End-user (system-wide)
 
 ```bash
-git clone <url> ~/dev/tray4hermes
-cd ~/dev/tray4hermes
-pip install --user PyQt5
-
-# Autostart po startu KDE
-cp hermes-tray.desktop ~/.config/autostart/
-
-# Spustit ručně (s watchdogem)
-./run.sh
+uv pip install --system tray4hermes
+# or with pipx:
+pipx install tray4hermes
 ```
 
-## Stavová logika
+Then enable autostart:
 
-Tray kombinuje dva zdroje stavu:
+```bash
+cp hermes-tray.desktop ~/.config/autostart/
+```
 
-| Zdroj | Co říká |
-|-------|---------|
-| `~/.hermes/gateway_state.json` (primární) | Autoritativní – píše ho samotný gateway. Pokud je starší než 30 s, ignorujeme. |
-| `systemctl --user is-active hermes-gateway.service` (fallback) | Když `gateway_state.json` chybí nebo je zastaralý. |
+### Development (editable)
 
-Výsledné stavy:
+```bash
+git clone https://forgejo.he1.co/HERMbuddy/tray4hermes.git
+cd tray4hermes
+uv pip install --system -e ".[dev]"
+./scripts/dev.sh   # installs deps + runs tests
+```
 
-| Kód | Ikona | Význam |
-|-----|-------|--------|
-| `active` | 🟢 zelená | Gateway běží a je připojená k platformám |
-| `warming` | 🟠 oranžová | Gateway běží, ale ještě nepřipojena (typicky OAuth credential warm-up) |
-| `activating` | 🔵 modrá | systemd startuje službu |
-| `inactive` | ⚫ šedá | Gateway zastavena |
-| `failed` | 🔴 červená | systemd služba selhala |
-| `unknown` | ⚫ šedá | Nelze přečíst stav |
+Launch the tray:
 
-## Přepnutí profilu
+```bash
+# Either via the installed console script:
+tray4hermes
 
-Tray menu → `Profil` → vyber profil. Akce provede:
+# Or via the watchdog wrapper (auto-restart on crash):
+./run.sh
 
-1. Zapíše `selected_profile` do `~/.config/tray4hermes/state.json`
-2. Potvrdí s tebou dialogem
-3. Spustí `hermes profile use <name>` (built-in agent příkaz)
-4. Restartuje `hermes-gateway.service`
+# Or as a module:
+python -m tray4hermes
+```
 
-Aktuální Discord session se může krátce odpojit (WebSocket reconnect).
+## Security
 
-## Konfigurace tray
-
-`~/.config/tray4hermes/state.json` (vytvoří se automaticky):
+This package **does not handle any credentials, tokens, or secrets**.
+The only file it writes is `~/.config/tray4hermes/state.json`, which
+contains the currently-selected profile name and a schema version:
 
 ```json
 {
   "version": 1,
-  "selected_profile": ""
+  "selected_profile": "default"
 }
 ```
 
-`selected_profile` se **použije při Start/Restart z tray**. Když je
-prázdné, tray startuje s `hermes profile use default`.
+If you find a security issue, please open a private issue on the
+Forgejo instance (preferred) or contact the maintainer directly. Do
+**not** disclose vulnerabilities in public issues or commits.
 
-## Verze
+### Threat model
 
-Viz `__version__` v `hermes_tray.py`. Zobrazuje se v menu „O tray4hermes".
+| Vector | Mitigation |
+|--------|------------|
+| RCE via malicious `gateway_state.json` | Loaded as JSON only; no `eval`/`exec`/shell. Strict shape. |
+| Log injection | Log viewer is read-only; uses `QPlainTextEdit` (escapes HTML). |
+| Profile path injection | Profile name validated by Hermes Agent itself (`hermes profile use` returns non-zero on missing). |
+| Lock file race | `O_CREAT\|O_EXCL` + PID liveness probe + recursive single retry. |
+| Filesystem exhaustion on `state.json` write | Atomic `tmp` + `os.replace`; directory created with `parents=True`. |
+
+The tray is sandboxed against the rest of Hermes Agent: even a
+zero-day in tray4hermes cannot read `auth.json`, the `.env` file, or
+trigger a model call. The worst it can do is crash and be restarted
+by the watchdog — at which point it just reads the (still intact)
+state and re-renders the tray icon.
+
+## Development
+
+### Run tests
+
+```bash
+./scripts/dev.sh                          # install + pytest
+./scripts/dev.sh tests/test_state.py -v   # specific file
+```
+
+Tests use `QT_QPA_PLATFORM=offscreen` so they run in CI / headless
+environments without a display server.
+
+### Lint & format
+
+```bash
+uv run ruff check src tests
+uv run ruff format src tests
+```
+
+### Security scan
+
+```bash
+uv run bandit -c pyproject.toml -r src
+```
+
+### Pre-commit hooks (optional but recommended)
+
+```bash
+uv pip install --system pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
+## Project layout
+
+```
+tray4hermes/
+├── pyproject.toml            # PEP 621, uv-friendly, exact-pinned deps
+├── LICENSE                   # MIT
+├── README.md
+├── .gitignore                # incl. secret patterns
+├── .pre-commit-config.yaml
+├── run.sh                    # watchdog wrapper
+├── hermes-tray.desktop       # KDE autostart
+├── scripts/
+│   └── dev.sh                # install + test convenience
+├── src/
+│   └── tray4hermes/
+│       ├── __init__.py       # __version__
+│       ├── __main__.py       # python -m tray4hermes
+│       ├── app.py            # HermesTray QObject glue
+│       ├── state.py          # @dataclass + aggregation logic
+│       ├── paths.py          # all filesystem constants
+│       ├── icons.py          # QPainter icon factory
+│       ├── lock.py           # single-instance lock
+│       ├── logs_view.py      # LogDialog
+│       └── py.typed          # PEP 561 marker
+└── tests/
+    ├── conftest.py
+    ├── test_state.py         # pure-Python, ~30 tests
+    ├── test_lock.py          # pure-Python, ~5 tests
+    └── test_app.py           # Qt offscreen, ~4 tests
+```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
