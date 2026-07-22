@@ -46,6 +46,17 @@ from pathlib import Path
 # `msgid ""` field of every .po file we ship.
 _DOMAIN = "tray4hermes"
 
+# Default gettext binding — identity function. ``install()`` replaces
+# this with the active translation. Having a module-level ``_`` here
+# means callers can always do ``i18n._("foo")`` without an
+# AttributeError before ``install()`` has run (e.g. during import).
+import gettext as _gettext_init  # noqa: E402
+
+_null_translation = _gettext_init.NullTranslations()
+_ = _null_translation.gettext  # type: ignore[assignment]
+gettext = _null_translation.gettext  # type: ignore[assignment]
+ngettext = _null_translation.ngettext  # type: ignore[assignment]
+
 
 # Where to look for compiled .mo files.
 #
@@ -165,13 +176,47 @@ def install(language: str | None = None) -> None:
         _stdlib_gettext.install(_DOMAIN, localedir=None, names=["ngettext"])
         return
 
+    # English is the canonical source language. The .py code uses
+    # English msgIDs, so when the user picks "en" (or no translation
+    # is available for their locale), we must return the source string
+    # verbatim — NOT fall through to Czech. We do this by short-
+    # circuiting: if English is requested and we don't have an en.mo,
+    # bind NullTranslations (identity function).
+    if language == "en":
+        _stdlib_gettext.install(_DOMAIN, localedir=None, names=["ngettext"])
+        # Also expose on our module for explicit imports.
+        _null = _stdlib_gettext.NullTranslations()
+        globals()["gettext"] = _null.gettext
+        globals()["ngettext"] = _null.ngettext
+        globals()["_"] = _null.gettext
+        return
+
     candidates: list[str] = []
+    explicit_ask_unavailable = False
+    available = available_languages()
+
     if language:
-        candidates.append(language)
-    # Fallback chain: explicit ask → env vars → English (canonical
-    # reference, fall-back to source) → Czech (first translation).
-    candidates.extend(_resolve_from_env())
-    candidates.extend(["en", "cs"])
+        if language in available:
+            candidates.append(language)
+        else:
+            # User explicitly asked for a language we don't ship.
+            # Do NOT fall through to Czech — return English source.
+            explicit_ask_unavailable = True
+
+    # Env-derived candidates, filtered to what we actually ship.
+    # But only if the user didn't explicitly ask for an unavailable
+    # language — if they did, we respect their choice and return
+    # English source strings, not their OS locale.
+    if not explicit_ask_unavailable:
+        for env_lang in _resolve_from_env():
+            if env_lang in available and env_lang not in candidates:
+                candidates.append(env_lang)
+
+    # If the user didn't explicitly ask for an unavailable language,
+    # add Czech as the last-resort fallback (it's the first translation
+    # we shipped, and it covers the maintainer's locale).
+    if not explicit_ask_unavailable and "cs" not in candidates:
+        candidates.append("cs")
 
     # Deduplicate while preserving order
     seen: set[str] = set()
@@ -180,6 +225,18 @@ def install(language: str | None = None) -> None:
         if c not in seen:
             seen.add(c)
             ordered.append(c)
+
+    if not ordered:
+        # No matching translation found — bind NullTranslations
+        # so _() returns the English source string verbatim.
+        # We do NOT call gettext.translation() here because it would
+        # scan the locales dir and pick up cs.mo as a default.
+        _null = _stdlib_gettext.NullTranslations()
+        _null.install(names=["ngettext"])
+        globals()["gettext"] = _null.gettext
+        globals()["ngettext"] = _null.ngettext
+        globals()["_"] = _null.gettext
+        return
 
     translation = _stdlib_gettext.translation(
         domain=_DOMAIN,

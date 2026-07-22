@@ -55,23 +55,24 @@ def test_install_with_cs_returns_czech_copy() -> None:
     """When ``install(language='cs')`` runs against our shipped
     ``cs.mo``, ``_(...)`` must return translated strings.
 
-    Czech IS the source language (the Czech .po file has
-    msgstr = msgid verbatim), so we expect strings like
-    'Kopírovat' to round-trip.
+    Source code uses English msgIDs (e.g. ``_("Copy")``); the cs.po
+    maps ``Copy → Kopírovat``. So after install('cs'), ``_("Copy")``
+    must return the Czech translation.
     """
     i18n.install(language="cs")
     _ = _gettext()
-    # Identical to source — Latin alphabet survives intact.
-    assert _("Kopírovat") == "Kopírovat"
+    assert _("Copy") == "Kopírovat"
+    assert _("Settings") == "Nastavení"
+    assert _("Find") == "Najít"
 
 
 def test_install_with_en_returns_english_source() -> None:
     """English IS the source language; install(language='en')
-    shouldn't break strings — and we don't ship an en.po, so
-    _ resolves through the source fallback chain."""
+    returns msgIDs verbatim (NullTranslations identity)."""
     i18n.install(language="en")
     _ = _gettext()
-    assert _("Kopírovat") == "Kopírovat"
+    assert _("Copy") == "Copy"
+    assert _("Settings") == "Settings"
     assert _("Find") == "Find"
     assert (
         _("this string definitely does not exist in any translation")
@@ -81,10 +82,13 @@ def test_install_with_en_returns_english_source() -> None:
 
 def test_install_with_unknown_language_falls_back_to_source() -> None:
     """Calling install(language='xx') where 'xx' is not in our
-    catalogue must fall back to source strings, not raise."""
+    catalogue must fall back to source strings (English), not
+    to Czech."""
     i18n.install(language="xx-this-does-not-exist")
     _ = _gettext()
-    assert _("Kopírovat") == "Kopírovat"
+    # Unknown language → gettext fallback chain → no match →
+    # NullTranslations → returns msgID verbatim (English source).
+    assert _("Copy") == "Copy"
 
 
 def test_available_languages_includes_cs() -> None:

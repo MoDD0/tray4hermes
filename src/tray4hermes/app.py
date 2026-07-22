@@ -28,17 +28,19 @@ from tray4hermes import paths as _paths
 from tray4hermes.icons import STATE_COLORS, STATE_TOOLTIPS, make_icon
 
 # After `i18n.install(...)` runs (in __main__), `tray4hermes.i18n._`
-# is bound to the active translation. Until that happens — for
-# example when a test imports this module without going through
-# `__main__` — `_` falls back to a NullTranslations().gettext that
-# returns the source string verbatim. So `_("Foo")` in untranslated
-# contexts always yields `"Foo"` (no AttributeError, no missing-attr).
+# is bound to the active translation. We use a *dynamic* lookup so
+# that switching languages at runtime (via switch_language) is
+# picked up by modules that imported `_` at load time. The lambda
+# reads ``i18n._`` on every call, not just once at import.
 try:
-    from tray4hermes.i18n import _ as _  # noqa: PLC0415 (deliberate import-after-try)
+    from tray4hermes import i18n as _i18n_mod
+
+    def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
+        """Dynamic gettext wrapper — looks up i18n._ on every call."""
+        return _i18n_mod._(s)  # type: ignore[attr-defined]
 except ImportError:
 
     def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
-        """Stub gettext for contexts where i18n.install() hasn't run yet."""
         return s
 
 
@@ -118,7 +120,7 @@ class HermesTray:
     def _build_menu(self) -> QMenu:
         menu = QMenu()
 
-        self._status_action = QAction(_("Kontroluji…"), menu)
+        self._status_action = QAction(_("Checking…"), menu)
         self._status_action.setEnabled(False)
         menu.addAction(self._status_action)
 
@@ -132,7 +134,7 @@ class HermesTray:
 
         # Profile submenu — rebuilt every time we open the menu so the radio
         # state always reflects the persisted choice.
-        self._profile_menu = menu.addMenu(_("Profil"))
+        self._profile_menu = menu.addMenu(_("Profile"))
         self._rebuild_profile_menu()
 
         menu.addSeparator()
@@ -151,11 +153,11 @@ class HermesTray:
 
         menu.addSeparator()
 
-        self._logs_action = QAction(_("📋 Logy"), menu)
+        self._logs_action = QAction(_("📋 Logs"), menu)
         self._logs_action.triggered.connect(self._show_logs)
         menu.addAction(self._logs_action)
 
-        self._tray_settings_action = QAction(_("⚙  Nastavení tray4hermes"), menu)
+        self._tray_settings_action = QAction(_("⚙  tray4hermes Settings"), menu)
         self._tray_settings_action.triggered.connect(self._open_tray_settings)
         menu.addAction(self._tray_settings_action)
 
@@ -169,11 +171,11 @@ class HermesTray:
 
         menu.addSeparator()
 
-        self._about_action = QAction(_("ℹ  O tray4hermes") + f" (v{__version__})", menu)
+        self._about_action = QAction(_("ℹ  About tray4hermes") + f" (v{__version__})", menu)
         self._about_action.triggered.connect(self._show_about)
         menu.addAction(self._about_action)
 
-        self._quit_action = QAction(_("✖  Ukončit tray"), menu)
+        self._quit_action = QAction(_("✖  Quit tray"), menu)
         self._quit_action.triggered.connect(self._quit)
         menu.addAction(self._quit_action)
 
@@ -199,7 +201,7 @@ class HermesTray:
 
         reply = QMessageBox.question(
             None,
-            _("Změnit profil?"),
+            _("Change profile?"),
             _(
                 "Restartovat gateway s profilem '{name}'?\n\n"
                 "Aktuální session v Discordu/Hermes Desktopu se může krátce odpojit."
@@ -214,13 +216,13 @@ class HermesTray:
         if not ok:
             QMessageBox.warning(
                 None,
-                _("Chyba"),
+                _("Error"),
                 _(
                     "Nelze nastavit profil '{name}':\n\n{out_msg}\n\n"
                     "Profil musí existovat v {profiles_dir}/."
                 ).format(
                     name=name,
-                    out_msg=out or _("(bez výstupu)"),
+                    out_msg=out or _("(no output)"),
                     profiles_dir=str(_paths.profiles_dir()),
                 ),
             )
@@ -281,7 +283,7 @@ class HermesTray:
         config = _paths.config_yaml()
         if not config.exists():
             QMessageBox.warning(
-                None, _("Chyba"), _("Config nenalezen:\n{config}").format(config=config)
+                None, _("Error"), _("Config not found:\n{config}").format(config=config)
             )
             return
 

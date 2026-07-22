@@ -95,8 +95,25 @@ def main() -> int:
         )
         return 0
 
-    # Bind gettext with the requested language (or env fallback).
-    _i18n_install(language=language_arg)
+    # Bind gettext with the requested language.
+    #
+    # Priority:
+    #   1. --language CLI flag (highest)
+    #   2. Saved TraySettings.language (from state.json)
+    #   3. OS env (LANG/LC_ALL/LC_MESSAGES)
+    #   4. English source (fallback)
+    saved_lang = None
+    try:
+        from tray4hermes.tray_settings import load_tray_settings
+
+        saved_lang = load_tray_settings().language
+    except Exception as e:  # noqa: BLE001
+        # Non-fatal — fall through to env/CLI
+        import sys as _sys
+
+        print(f"[tray4hermes] could not load saved language: {e}", file=_sys.stderr)
+    effective_lang = language_arg or saved_lang
+    _i18n_install(language=effective_lang)
 
     from tray4hermes.lock import acquire, release
 

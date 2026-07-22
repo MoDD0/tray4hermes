@@ -45,7 +45,7 @@ class TestHermesTrayConstruction:
             actions = [a.text() for a in tray._menu.actions() if a.text()]
             assert any("Profil" in t for t in actions), "missing profile submenu"
             assert any("Start" in t for t in actions)
-            assert any("Logy" in t for t in actions)
+            assert any("Logs" in t for t in actions)
         finally:
             tray._quit()
 

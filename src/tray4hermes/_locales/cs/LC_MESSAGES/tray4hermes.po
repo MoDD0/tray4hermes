@@ -1,258 +1,223 @@
 # Czech translations for tray4hermes UI strings.
-# (Czech isn't actually a translation here — Czech IS the source
-# language used during development, so the .mo file simply echoes
-# the source. The compiled Czech translation is intentionally
-# byte-identical to the source strings because every msgstr is
-# already in Czech. But shipping a .mo for Czech means the
-# runtime can still pick a Czech translation, validate the
-# extraction pipeline, and honour ``--language cs`` even when the
-# locale is something else. It also makes the build reproducible
-# for future translators who want to fork off cs.po into de.po /
-# sk.po / etc.)
+# msgid = English (canonical source language used in the .py code)
+# msgstr = Czech translation
+#
+# Workflow:
+#   1. Strings in source code are wrapped in _("English text")
+#   2. This file maps English → Czech
+#   3. Run scripts/i18n_compile.sh to compile .mo
+#   4. At runtime, i18n.install(language='cs') makes _("English") return "Czech"
+#
 msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=((n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2);\n"
 
-msgid "Kontroluji…"
+#: src/tray4hermes/app.py — tray menu
+msgid "Checking…"
 msgstr "Kontroluji…"
 
-msgid "Model: ?"
-msgstr "Model: ?"
-
-msgid "Profil"
+msgid "Profile"
 msgstr "Profil"
 
-msgid "▶  Start"
-msgstr "▶  Start"
-
-msgid "⏹  Stop"
-msgstr "⏹  Stop"
-
-msgid "🔄 Restart"
-msgstr "🔄 Restart"
-
-msgid "📋 Logy"
+msgid "📋 Logs"
 msgstr "📋 Logy"
 
-msgid "⚙  Hermes config"
-msgstr "⚙  Hermes config"
-
-msgid "💻  Hermes CLI"
-msgstr "💻  Hermes CLI"
-
-msgid "ℹ  O tray4hermes"
-msgstr "ℹ  O tray4hermes"
-
-msgid "✖  Ukončit tray"
-msgstr "✖  Ukončit tray"
-
-msgid "Změnit profil?"
-msgstr "Změnit profil?"
-
-msgid ""
-"Restartovat gateway s profilem '{name}'?\n\n"
-"Aktuální session v Discordu/Hermes Desktopu se může krátce odpojit."
-msgstr ""
-"Restartovat gateway s profilem '{name}'?\n\n"
-"Aktuální session v Discordu/Hermes Desktopu se může krátce odpojit."
-
-msgid "Chyba"
-msgstr "Chyba"
-
-msgid ""
-"Nelze nastavit profil '{name}':\n\n"
-"{out_msg}\n\n"
-"Profil musí existovat v {profiles_dir}/."
-msgstr ""
-"Nelze nastavit profil '{name}':\n\n"
-"{out_msg}\n\n"
-"Profil musí existovat v {profiles_dir}/."
-
-msgid "(bez výstupu)"
-msgstr "(bez výstupu)"
-
-msgid "Config nenalezen:\n{config}"
-msgstr "Config nenalezen:\n{config}"
-
-msgid ""
-"<b>tray4hermes v{version}</b><br><br>"
-"Pasivní observer pro Hermes Gateway.<br><br>"
-"<b>Čte:</b> ~/.hermes/{{gateway_state.json, profiles/, config.yaml, "
-"logs/gateway.log}}<br>"
-"<b>Píše:</b> ~/.config/tray4hermes/state.json<br>"
-"<b>Ovládá:</b> systemctl --user ({service})<br><br>"
-"Hermes Agent: github.com/NousResearch/hermes-agent"
-msgstr ""
-"<b>tray4hermes v{version}</b><br><br>"
-"Pasivní observer pro Hermes Gateway.<br><br>"
-"<b>Čte:</b> ~/.hermes/{{gateway_state.json, profiles/, config.yaml, "
-"logs/gateway.log}}<br>"
-"<b>Píše:</b> ~/.config/tray4hermes/state.json<br>"
-"<b>Ovládá:</b> systemctl --user ({service})<br><br>"
-"Hermes Agent: github.com/NousResearch/hermes-agent"
-
-msgid "Log viewer — nastavení"
-msgstr "Log viewer — nastavení"
-
-msgid "Maximální počet řádků v bufferu:"
-msgstr "Maximální počet řádků v bufferu:"
-
-msgid "Velikost písma:"
-msgstr "Velikost písma:"
-
-msgid "Auto-scroll na nové řádky"
-msgstr "Auto-scroll na nové řádky"
-
-msgid "Zalamovat dlouhé řádky"
-msgstr "Zalamovat dlouhé řádky"
-
-msgid "Zobrazované úrovně:"
-msgstr "Zobrazované úrovně:"
-
-msgid "Max řádků: "
-msgstr "Max řádků: "
-
-msgid ""
-"Maximální počet řádků v bufferu (0 = bez limitu).\n"
-"Starší řádky jsou průběžně odstraňovány."
-msgstr ""
-"Maximální počet řádků v bufferu (0 = bez limitu).\n"
-"Starší řádky jsou průběžně odstraňovány."
-
-msgid "Čas: "
-msgstr "Čas: "
-
-msgid "Zobrazit pouze řádky z posledních X minut (0 = vše)."
-msgstr "Zobrazit pouze řádky z posledních X minut (0 = vše)."
-
-msgid "Obrátit"
-msgstr "Obrátit"
-
-msgid ""
-"Při zapnutí: nejnovější řádky nahoře (journalctl styl).\n"
-"Při vypnutí: nejnovější dole (tail -f styl)."
-msgstr ""
-"Při zapnutí: nejnovější řádky nahoře (journalctl styl).\n"
-"Při vypnutí: nejnovější dole (tail -f styl)."
-
-msgid "Auto-scroll"
-msgstr "Auto-scroll"
-
-msgid "Zalamovat"
-msgstr "Zalamovat"
-
-msgid "Filtr: "
-msgstr "Filtr: "
-
-msgid "Hledat: "
-msgstr "Hledat: "
-
-msgid "Ctrl+F"
-msgstr "Ctrl+F"
-
-msgid "Najít"
-msgstr "Najít"
-
-msgid "Kopírovat"
-msgstr "Kopírovat"
-
-msgid "Vyčistit"
-msgstr "Vyčistit"
-
-msgid "Obnovit"
-msgstr "Obnovit"
-
-msgid "Nastavení"
-msgstr "Nastavení"
-
-msgid "Hermes Gateway — logy (tray4hermes v{version})"
-msgstr "Hermes Gateway — logy (tray4hermes v{version})"
-
-msgid "Find"
-msgstr "Find"
-
-msgid "Find next"
-msgstr "Find next"
-
-msgid "Find prev"
-msgstr "Find prev"
-
-msgid "Escape"
-msgstr "Escape"
-
-msgid "Řádek"
-msgstr "Řádek"
-
-msgid "Sloupec"
-msgstr "Sloupec"
-
-msgid "Viditelných"
-msgstr "Viditelných"
-
-msgid "ERR"
-msgstr "ERR"
-
-msgid "WARN"
-msgstr "WARN"
-
-msgid "ZAP"
-msgstr "ZAP"
-
-msgid "VYP"
-msgstr "VYP"
-
-msgid ""
-"tray4hermes is already running.\n"
-"Find it in the system tray."
-msgstr ""
-"tray4hermes is already running.\n"
-"Find it in the system tray."
-
-msgid "all"
-msgstr "Vše"
-
-#: src/tray4hermes/app.py:156
-msgid "⚙  Nastavení tray4hermes"
+msgid "⚙  tray4hermes Settings"
 msgstr "⚙  Nastavení tray4hermes"
 
-#: src/tray4hermes/tray_settings.py:206
-msgid "Nastavení tray4hermes"
-msgstr "Nastavení tray4hermes"
+msgid "ℹ  About tray4hermes"
+msgstr "ℹ  O tray4hermes"
 
-#: src/tray4hermes/tray_settings.py:210
-msgid "Jazyk rozhraní:"
+msgid "✖  Quit tray"
+msgstr "✖  Ukončit tray"
+
+msgid "Change profile?"
+msgstr "Změnit profil?"
+
+msgid "Error"
+msgstr "Chyba"
+
+msgid "(no output)"
+msgstr "(bez výstupu)"
+
+#: src/tray4hermes/app.py — about dialog body
+msgid ""
+"<b>tray4hermes v{version}</b><br><br>"
+"Passive observer for Hermes Gateway.<br><br>"
+"<b>Reads:</b> ~/.hermes/{{gateway_state.json, profiles/, config.yaml, "
+"logs/gateway.log}}<br>"
+"<b>Writes:</b> ~/.config/tray4hermes/state.json<br>"
+"<b>Controls:</b> systemctl --user ({service})<br><br>"
+"Hermes Agent: github.com/NousResearch/hermes-agent"
+msgstr ""
+"<b>tray4hermes v{version}</b><br><br>"
+"Pasivní observer pro Hermes Gateway.<br><br>"
+"<b>Čte:</b> ~/.hermes/{{gateway_state.json, profiles/, config.yaml, "
+"logs/gateway.log}}<br>"
+"<b>Píše:</b> ~/.config/tray4hermes/state.json<br>"
+"<b>Ovládá:</b> systemctl --user ({service})<br><br>"
+"Hermes Agent: github.com/NousResearch/hermes-agent"
+
+msgid "Config not found:\\n{config}"
+msgstr "Config nenalezen:\\n{config}"
+
+#: src/tray4hermes/app.py — profile change dialog
+msgid ""
+"Restart gateway with profile '{name}'?\\n\\n"
+"Current session in Discord/Hermes Desktop may briefly disconnect."
+msgstr ""
+"Restartovat gateway s profilem '{name}'?\\n\\n"
+"Aktuální session v Discordu/Hermes Desktopu se může krátce odpojit."
+
+msgid ""
+"Cannot set profile '{name}':\\n\\n"
+"{out_msg}\\n\\n"
+"Profile must exist in {profiles_dir}/."
+msgstr ""
+"Nelze nastavit profil '{name}':\\n\\n"
+"{out_msg}\\n\\n"
+"Profil musí existovat v {profiles_dir}/."
+
+#: src/tray4hermes/logs_view.py — log viewer toolbar
+msgid "Log viewer — settings"
+msgstr "Log viewer — nastavení"
+
+msgid "Maximum lines in buffer:"
+msgstr "Maximální počet řádků v bufferu:"
+
+msgid "Font size:"
+msgstr "Velikost písma:"
+
+msgid "Auto-scroll on new lines"
+msgstr "Auto-scroll na nové řádky"
+
+msgid "Wrap long lines"
+msgstr "Zalamovat dlouhé řádky"
+
+msgid "Visible levels:"
+msgstr "Zobrazované úrovně:"
+
+msgid "Max lines: "
+msgstr "Max řádků: "
+
+msgid "Time: "
+msgstr "Čas: "
+
+msgid "Reverse"
+msgstr "Obrátit"
+
+msgid "Search: "
+msgstr "Hledat: "
+
+msgid "Find"
+msgstr "Najít"
+
+msgid "Copy"
+msgstr "Kopírovat"
+
+msgid "Clear"
+msgstr "Vyčistit"
+
+msgid "Refresh"
+msgstr "Obnovit"
+
+msgid "Settings"
+msgstr "Nastavení"
+
+msgid "Line"
+msgstr "Řádek"
+
+msgid "Column"
+msgstr "Sloupec"
+
+msgid "Visible"
+msgstr "Viditelných"
+
+msgid "ON"
+msgstr "ZAP"
+
+msgid "OFF"
+msgstr "VYP"
+
+msgid "All"
+msgstr "Vše"
+
+#: src/tray4hermes/logs_view.py — settings dialog (expanded)
+msgid "Display"
+msgstr "Zobrazení"
+
+msgid "Behavior"
+msgstr "Chování"
+
+msgid "Time window:"
+msgstr "Časové okno:"
+
+msgid "Reverse order (newest first)"
+msgstr "Obrátit pořadí (nejnovější nahoře)"
+
+msgid "Show tracebacks (stack traces)"
+msgstr "Zobrazit tracebacky (stack traces)"
+
+msgid "Level filtering"
+msgstr "Filtrování úrovní"
+
+msgid "Language"
+msgstr "Jazyk"
+
+msgid "Interface language:"
 msgstr "Jazyk rozhraní:"
 
-#: src/tray4hermes/tray_settings.py:211
-msgid "Systémový (dle locale)"
+msgid "System (follow locale)"
 msgstr "Systémový (dle locale)"
 
-#: src/tray4hermes/tray_settings.py:225
-msgid "ℹ Změna jazyka se projeví po restartu tray4hermes."
-msgstr "ℹ Změna jazyka se projeví po restartu tray4hermes."
-
-#: src/tray4hermes/tray_settings.py:231
-msgid "Výchozí nastavení logů"
-msgstr "Výchozí nastavení logů"
-
-#: src/tray4hermes/tray_settings.py:235
-msgid "Výchozí počet řádků:"
-msgstr "Výchozí počet řádků:"
-
-#: src/tray4hermes/tray_settings.py:241
-msgid "0 = bez limitu"
+msgid "0 = unlimited"
 msgstr "0 = bez limitu"
 
-#: src/tray4hermes/tray_settings.py:245
-msgid "Auto-scroll od startu"
+msgid "Show only lines from the last X minutes (0 = all)."
+msgstr "Zobrazit pouze řádky z posledních X minut (0 = vše)."
+
+msgid "ℹ Language change takes effect after restarting tray4hermes."
+msgstr "ℹ Změna jazyka se projeví po restartu tray4hermes."
+
+msgid "0 = unlimited (all lines). At higher values, older lines are gradually removed."
+msgstr "0 = bez limitu (všechny řádky). Při vyšších hodnotách se starší řádky postupně odstraňují."
+
+msgid "When ON, the editor stays on the last line on refresh. When OFF, cursor position is preserved."
+msgstr "Při zapnutí zůstává editor na posledním řádku při obnově. Při vypnutí zachová pozici kurzoru."
+
+msgid "Journalctl style — newest lines at top, oldest at bottom. Default: newest at bottom (tail -f style)."
+msgstr "Journalctl styl — nejnovější řádky nahoře, nejstarší dole. Výchozí: nejnovější dole (tail -f styl)."
+
+msgid "Special category for stack trace lines. You can hide them and see only messages, or leave them visible."
+msgstr "Zvláštní kategorie pro stack trace řádky. Můžeš je skrýt a vidět jen zprávy, nebo nechat zobrazené."
+
+msgid "Hermes Gateway — logs (tray4hermes v{version})"
+msgstr "Hermes Gateway — logy (tray4hermes v{version})"
+
+#: src/tray4hermes/tray_settings.py
+msgid "tray4hermes Settings"
+msgstr "Nastavení tray4hermes"
+
+msgid "Log viewer defaults"
+msgstr "Výchozí nastavení logů"
+
+msgid "Default line count:"
+msgstr "Výchozí počet řádků:"
+
+msgid "Auto-scroll from start"
 msgstr "Auto-scroll od startu"
 
-#: src/tray4hermes/tray_settings.py:250
-msgid "Zalamovat od startu"
+msgid "Wrap from start"
 msgstr "Zalamovat od startu"
 
-#: src/tray4hermes/tray_settings.py:254
-msgid "Výchozí viditelné úrovně:"
+msgid "Default visible levels:"
 msgstr "Výchozí viditelné úrovně:"
+
+#: src/tray4hermes/__main__.py
+msgid "tray4hermes is already running.\\nFind it in the system tray."
+msgstr "tray4hermes již běží.\\nNajdeš ho v systémové liště."
+
+msgid "Wrap"
+msgstr "Zalamovat"

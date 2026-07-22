@@ -52,10 +52,12 @@ from tray4hermes.logs_view import LEVEL_COLORS
 from tray4hermes.paths import tray_state_file
 
 # Re-export the gettext stub so this module doesn't need the
-# try/except dance. If i18n.install() hasn't been called yet,
-# `_` falls back to identity (returns source strings verbatim).
+# try/except dance. Dynamic lookup — see app.py for rationale.
 try:
-    from tray4hermes.i18n import _ as _  # noqa: PLC0415
+    from tray4hermes import i18n as _i18n_mod
+
+    def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
+        return _i18n_mod._(s)  # type: ignore[attr-defined]
 except ImportError:
 
     def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
@@ -187,20 +189,20 @@ class TraySettingsDialog(QDialog):
 
     def __init__(self, current: TraySettings, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(_("Nastavení tray4hermes"))
+        self.setWindowTitle(_("tray4hermes Settings"))
         self.resize(400, 450)
         layout = QVBoxLayout(self)
 
         # ── Language ──────────────────────────────────────────────
-        layout.addWidget(self._section_label(_("Jazyk")))
+        layout.addWidget(self._section_label(_("Language")))
 
         row = QHBoxLayout()
-        row.addWidget(QLabel(_("Jazyk rozhraní:")))
+        row.addWidget(QLabel(_("Interface language:")))
         self._language = QComboBox()
         # The first entry is always "System (follow locale)"; then
         # English (canonical source); then every compiled .mo.
         self._lang_keys: list[str | None] = [None]
-        self._language.addItem(_("Systémový (dle locale)"))
+        self._language.addItem(_("System (follow locale)"))
         # English is always available (it's the source language).
         self._lang_keys.append("en")
         self._language.addItem("English")
@@ -228,37 +230,37 @@ class TraySettingsDialog(QDialog):
         row.addWidget(self._language)
         layout.addLayout(row)
 
-        hint = QLabel(_("ℹ Změna jazyka se projeví po restartu tray4hermes."))
+        hint = QLabel(_("ℹ Language change takes effect after restarting tray4hermes."))
         hint.setWordWrap(True)
         hint.setStyleSheet("color: gray; font-size: 9pt;")
         layout.addWidget(hint)
 
         # ── Log viewer defaults ───────────────────────────────────
-        layout.addWidget(self._section_label(_("Výchozí nastavení logů")))
+        layout.addWidget(self._section_label(_("Log viewer defaults")))
 
         # Default max lines
         row = QHBoxLayout()
-        row.addWidget(QLabel(_("Výchozí počet řádků:")))
+        row.addWidget(QLabel(_("Default line count:")))
         self._max_lines = QSpinBox()
         self._max_lines.setRange(0, 100_000)
         self._max_lines.setSingleStep(500)
         self._max_lines.setValue(current.default_max_lines)
-        self._max_lines.setToolTip(_("0 = bez limitu"))
+        self._max_lines.setToolTip(_("0 = unlimited"))
         row.addWidget(self._max_lines)
         layout.addLayout(row)
 
         # Default auto-scroll
-        self._auto_scroll = QCheckBox(_("Auto-scroll od startu"))
+        self._auto_scroll = QCheckBox(_("Auto-scroll from start"))
         self._auto_scroll.setChecked(current.default_auto_scroll)
         layout.addWidget(self._auto_scroll)
 
         # Default word wrap
-        self._word_wrap = QCheckBox(_("Zalamovat od startu"))
+        self._word_wrap = QCheckBox(_("Wrap from start"))
         self._word_wrap.setChecked(current.default_word_wrap)
         layout.addWidget(self._word_wrap)
 
         # Default levels
-        layout.addWidget(QLabel(_("Výchozí viditelné úrovně:")))
+        layout.addWidget(QLabel(_("Default visible levels:")))
         self._level_checks: dict[str, QCheckBox] = {}
         for level in ("ERROR", "WARNING", "INFO", "DEBUG", "TRACE"):
             cb = QCheckBox(level)

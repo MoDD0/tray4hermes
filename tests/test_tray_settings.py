@@ -112,7 +112,7 @@ def test_dialog_has_all_fields(hermes_home: Path, qtbot) -> None:
     )
     dlg = TraySettingsDialog(s)
     qtbot.addWidget(dlg)
-    assert dlg.windowTitle() == "Nastavení tray4hermes"
+    assert dlg.windowTitle() == "tray4hermes Settings"
     assert dlg._max_lines.value() == 500
     assert dlg._auto_scroll.isChecked() is False
     assert dlg._word_wrap.isChecked() is True
