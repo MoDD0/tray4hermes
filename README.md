@@ -142,10 +142,90 @@ seconds before the first model call actually succeeds.
 
 ## Requirements
 
-- Linux with KDE Plasma 5 (Plasma 6 uses Qt6; tray4hermes is Qt5)
+- **Linux** (testováno primárně na **Manjaro KDE**; mělo by fungovat
+  na libovolné distře s KDE Plasma 5, viz [Platform support](#platform-support))
+- **KDE Plasma 5** (Plasma 6 používá Qt6 — tray4hermes je Qt5; port na
+  Qt6 je v Roadmapě)
 - Python ≥ 3.11
 - Running `hermes-gateway.service` under `systemd --user`
 - `loginctl enable-linger $USER` for autostart after logout
+
+## Platform support
+
+**Primárně vyvinuto a testováno na Manjaro KDE** (rolling release,
+Plasma 5, `xcb` X11 backend).
+
+**Nativně by mělo fungovat na jakémkoli Linuxu, který má:**
+
+1. **Qt5 + PyQt5 nebo PySide2** (`python -c "from PyQt5.QtWidgets import QSystemTrayIcon; print('OK')"`
+   by mělo projít)
+2. **DBus session bus** (`echo $DBUS_SESSION_BUS_ADDRESS` by měl být
+   nastavený — typicky automaticky v desktop session)
+3. **System tray implementaci** respektující freedesktop.org Spec
+   (KDE Plasma, Xfce, LXQt, Cinnamon, MATE, GNOME s rozšířením,
+   Elementary OS s rozšířením…)
+4. **systemd --user** (nebo něco kompatibilního — OpenRC, runit
+   alternativy mají `hermes-gateway` API trochu jinde; bude potřeba
+   adaptér v `paths.py`)
+
+### Testováno
+
+| Distro / DE | Stav | Poznámky |
+|-------------|------|----------|
+| **Manjaro KDE** | ✅ primární | výchozí platforma pro vývoj a testy |
+| Arch Linux + KDE | 🟡 mělo by fungovat | prakticky totožné s Manjaro, jen balíčky z `extra` místo AUR |
+| **Ubuntu + KDE** | 🟡 mělo by fungovat | viz níže |
+| Fedora + KDE | 🟡 mělo by fungovat | `dnf install python3-pyqt5` |
+| openSUSE + KDE | 🟡 mělo by fungovat | `zypper install python3-PyQt5` |
+| CachyOS KDE | ✅ mělo by fungovat | Arch-based, prakticky identické |
+
+### Ubuntu s Unity / GNOME / jinými
+
+Tohle je **tray aplikace**, takže hlavní rozdíl je v tray supportu:
+
+- **Ubuntu + KDE Plasma** (`apt install kubuntu-desktop`) — mělo by
+  fungovat hned, akorát `python3-pyqt5` možná budeš muset doinstalovat
+  přes `apt install python3-pyqt5` nebo `pip install PyQt5`.
+- **Ubuntu + Unity (22.04+)** — Unity používá vlastní indicator tray,
+  ne SNI. Muselo by se upravit `icons.py` a `app.py` tak, aby se
+  registroval přes `dbus` na `com.canonical.Unity.LauncherEntry`.
+  Technicky možné, ale v tuto chvíli není implementované. Pokud na
+  Unity běžíš a chceš to — ozvi se v issues.
+- **Ubuntu + GNOME 41+** — GNOME záměrně **nepodporuje tray** (SNI
+  extension). Musíš doinstalovat rozšíření jako
+  [AppIndicator Support](https://extensions.gnome.org/extension/615/appindicator-support/),
+  pak by to mělo fungovat.
+- **Ubuntu + Cinnamon / MATE / XFCE** — všechny podporují SNI tray,
+  mělo by fungovat out-of-the-box.
+
+### Troubleshooting
+
+Když se tray **vůbec neukáže** v jiné distribuci:
+
+```bash
+# 1. Ověř že Qt5 vidí system tray
+python -c "from PyQt5.QtWidgets import QSystemTrayIcon, QApplication; \
+           app = QApplication([]); print('available:', QSystemTrayIcon.isSystemTrayAvailable())"
+
+# 2. Zkontroluj jestli DBus běží
+echo "DBus session bus: $DBUS_SESSION_BUS_ADDRESS"
+dbus-launch --autolaunch=output-file=/tmp/dbus.out
+
+# 3. Zkus explicit-nastavit XDG
+export XDG_CURRENT_DESKTOP=KDE
+export XDG_SESSION_TYPE=x11
+tray4hermes --debug
+```
+
+Pokud `QSystemTrayIcon.isSystemTrayAvailable()` vrátí `False`, je to
+**distro/desktop combo problém**, ne chyba v tray4hermes. Můžeš:
+- otevřít issue s výstupem `python -c "import sys; print(sys.platform, ...")`
+  + verze Qt (`PyQt5.QtCore.PYQT_VERSION_STR`)
+- zeptat se v Hermes komunitě (nebo rovnou u nás v issues, pomůžeme
+  rozšířit `paths.py` o tvůj setup)
+
+Chceme, aby to fungovalo **všude** kde má hermes-agent šanci běžet.
+Takže distrospecifické PR jsou vítané.
 
 ## Installation
 
