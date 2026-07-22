@@ -110,3 +110,23 @@ napiš issue a přidáme CZ objasnění sem.
 ## Licence
 
 MIT — viz [LICENSE](../LICENSE).
+
+## Hosting a mirror
+
+Primární host je **GitHub** (https://github.com/MoDD0/tray4hermes), kde
+se vyvíjí, řeší issues a přijímají PR. Forgejo
+(https://forgejo.he1.co/HERMbuddy/tray4hermes) je **read-only mirror** —
+tam prosím neotvírej issues ani PR.
+
+Detaily viz anglická verze: [Hosting & mirror](../README.md#hosting--mirror).
+
+---
+
+## Jak přispět (krátká poznámka)
+
+Detailní pokyny pro PR najdeš v anglické verzi:
+[Contributing](../README.md#contributing).
+
+Krátce: nezlom testy, nepřidávej runtime závislosti bez diskuze, žádné
+tajné klíče v diffu, nic nepiš do `~/.hermes/*` (to je owned Hermes
+Agent), zůstaň u MIT licence.

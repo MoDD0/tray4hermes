@@ -356,9 +356,10 @@ and a schema version:
 }
 ```
 
-If you find a security issue, please open a private issue on the
-Forgejo instance (preferred) or contact the maintainer directly. Do
-**not** disclose vulnerabilities in public issues or commits.
+If you find a security issue, please open a **private** issue via
+GitHub's "Report a vulnerability" feature (Settings → Security →
+Report a vulnerability). Do **not** disclose vulnerabilities in
+public issues or commits.
 
 ### Threat model
 
@@ -448,6 +449,39 @@ tray4hermes/
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+## Hosting & mirror
+
+**Primary host: GitHub** → https://github.com/MoDD0/tray4hermes
+
+- All development, issues, pull requests, releases, and CI happen there.
+- This is where contributors fork from and push branches to.
+- Releases are tagged here first; everything else cascades from here.
+
+**Read-only mirror: Forgejo** → https://forgejo.he1.co/HERMbuddy/tray4hermes
+
+- Maintained by the project owner as a backup / self-host reference.
+- **Not** accepting issues or PRs (it would create double-tracking
+  pain). Open your issues on GitHub.
+- Synced manually with `git push --mirror forgejo main` whenever the
+  GitHub main branch moves. Expect up to a few hours of lag.
+
+If you fork and your fork ends up talking to Forgejo only — that's a
+fork of a mirror, which works for read-only inspection but **don't open
+PRs against it**: they'll be ignored. Always target the GitHub repo.
+
+Why mirror at all? Two reasons, philosophical:
+
+1. **Self-host reference.** When the project was first sketched, it
+   lived on Forgejo. Keeping a mirror there shows the code's lineage
+   and keeps the project's history visible on at least one
+   non-commercial forge.
+2. **Distributed risk.** If GitHub has another 2024-style incident,
+   the project still has a live copy somewhere else. Both have the
+   same authoritative commit history; either can be promoted to
+   primary if needed.
 
 ---
 

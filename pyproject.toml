@@ -60,10 +60,15 @@ dev = [
 ]
 
 [project.urls]
+# GitHub is the primary — issue tracking, releases, web hooks. All
+# development happens here.
 Homepage = "https://github.com/MoDD0/tray4hermes"
 Repository = "https://github.com/MoDD0/tray4hermes.git"
 Issues = "https://github.com/MoDD0/tray4hermes/issues"
 Changelog = "https://github.com/MoDD0/tray4hermes/blob/main/README.md#roadmap-next-up-ideas"
+# Forgejo is a read-only mirror maintained by the project owner.
+# No issues / PRs accepted there — use GitHub.
+"Mirror" = "https://forgejo.he1.co/HERMbuddy/tray4hermes"
 
 [project.scripts]
 tray4hermes = "tray4hermes.__main__:main"
