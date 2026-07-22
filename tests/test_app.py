@@ -116,7 +116,7 @@ class TestLogDialog:
         dlg = LogDialog()
         # Manually invoke the first refresh — it should swallow the OSError
         dlg._refresh()
-        assert dlg._text.toPlainText() == ""
+        assert dlg._editor.toPlainText() == ""
 
     def test_dialog_reads_existing_log(self, hermes_home, qtbot) -> None:
         # Write some lines to a log file in the standard location
@@ -127,5 +127,48 @@ class TestLogDialog:
 
         dlg = LogDialog()
         dlg._refresh()
-        assert "line 1" in dlg._text.toPlainText()
-        assert "line 3" in dlg._text.toPlainText()
+        text = dlg._editor.toPlainText()
+        assert "line 1" in text
+        assert "line 3" in text
+
+    def test_level_filter_hides_other_levels(self, hermes_home, qtbot) -> None:
+        # If only ERROR is enabled, WARN/INFO lines should be hidden after refresh
+        from tray4hermes.logs_view import LogDialog
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text(
+            "2026-07-22 10:00:00 INFO  this is info\n"
+            "2026-07-22 10:00:01 WARN  this is warn\n"
+            "2026-07-22 10:00:02 ERROR this is error\n"
+        )
+        dlg = LogDialog()
+        from tray4hermes.logs_view import LogSettings
+
+        # LogSettings is a frozen dataclass — bypass the frozen check to
+        # swap in a settings object with a different level filter.
+        object.__setattr__(dlg, "_settings", LogSettings(show_levels=("ERROR",)))
+        dlg._refresh()
+        text = dlg._editor.toPlainText()
+        assert "this is error" in text
+        assert "this is info" not in text
+        assert "this is warn" not in text
+
+    def test_max_lines_buffer_limit(self, hermes_home, qtbot) -> None:
+        # setMaximumBlockCount trims old lines from the top
+        from tray4hermes.logs_view import LogDialog, LogSettings
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("\n".join(f"2026-07-22 10:00:{i:02d} INFO line {i}" for i in range(50)))
+        dlg = LogDialog()
+        dlg._settings = LogSettings(max_lines=10)
+        dlg._apply_settings()
+        dlg._refresh()
+        block_count = dlg._editor.blockCount()
+        # 10 visible lines + maybe a trailing empty block
+        assert block_count <= 11
+        # Newest content is preserved
+        assert "line 49" in dlg._editor.toPlainText()
+        # Oldest content is dropped
+        assert "line 0" not in dlg._editor.toPlainText()
