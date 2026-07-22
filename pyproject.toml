@@ -10,7 +10,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tray4hermes"
-version = "2.0.0"
+# Dynamic version: read from src/tray4hermes/__init__.py via
+# [tool.setuptools.dynamic]. Single source of truth for the version.
+dynamic = ["version"]
 description = "Passive KDE/Plasma tray monitor for Hermes Gateway (Nous Research Hermes Agent)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,7 +21,16 @@ authors = [
 ]
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["hermes", "hermes-agent", "tray", "kde", "plasma", "system-tray"]
+keywords = [
+  "hermes",
+  "hermes-agent",
+  "tray",
+  "kde",
+  "plasma",
+  "system-tray",
+  "qt5",
+  "pyqt5",
+]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: X11 Applications",
@@ -30,8 +41,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Topic :: Utilities",
-]
-# Exact pins only — no ranges. See hermes-agent pyproject.toml for rationale.
+] # Exact pins only — no ranges. See hermes-agent pyproject.toml for rationale.
 dependencies = [
   # Qt GUI bindings — cp38-abi3 wheel, works on every supported Python.
   # Qt5 LTS is the only branch packaged for KDE Plasma 5 (Plasma 6 uses Qt6).
@@ -50,18 +60,27 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://forgejo.he1.co/HERMbuddy/tray4hermes"
-Repository = "https://forgejo.he1.co/HERMbuddy/tray4hermes.git"
-Issues = "https://forgejo.he1.co/HERMbuddy/tray4hermes/issues"
+Homepage = "https://github.com/MoDD0/tray4hermes"
+Repository = "https://github.com/MoDD0/tray4hermes.git"
+Issues = "https://github.com/MoDD0/tray4hermes/issues"
+Changelog = "https://github.com/MoDD0/tray4hermes/blob/main/README.md#roadmap-next-up-ideas"
 
 [project.scripts]
 tray4hermes = "tray4hermes.__main__:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "tray4hermes.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-"tray4hermes" = ["py.typed"]
+"tray4hermes" = [
+  "py.typed",
+  "data/*.desktop",
+] # Autostart .desktop file ships inside the installed wheel;
+# users copy it to ~/.config/autostart/ themselves
+# (see README → "Install autostart on KDE" snippet).
 
 # ── pytest ──────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]

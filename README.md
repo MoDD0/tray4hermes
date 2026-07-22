@@ -4,89 +4,98 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-**A passivní KDE/Plasma system-tray monitor pro Hermes Gateway** — messaging
-bridge from [Hermes Agent](https://github.com/NousResearch/hermes-agent)
-by Nous Research.
+> **Language:** [English](README.md) · [Čeština](docs/README.cs.md)
 
-> tray4hermes is **read-only with respect to Hermes Agent**. Controls the
-> gateway via `systemctl --user`, persists one small JSON file of its
-> own, reads everything else. Does not store tokens, does not configure
-> providers, does not edit `~/.hermes/config.yaml`. All of that lives
-> in Hermes Agent itself.
+A passive KDE/Plasma system-tray monitor for **Hermes Gateway** — the
+messaging bridge that ships with
+[Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous
+Research.
+
+> tray4hermes is **read-only with respect to Hermes Agent**. It controls
+> the gateway via `systemctl --user`, persists one small JSON file of its
+> own, and reads everything else. It does not store tokens, does not
+> configure providers, does not edit `~/.hermes/config.yaml`. All of
+> that lives in Hermes Agent itself.
 
 ---
 
-## Proč to vzniklo (a proč bys to mohl chtít taky)
+## Why this exists
 
-Hermes Agent je šikovný kus softwaru, ale jeho `hermes-gateway` běží
-jako **`systemd --user` service** — což znamená, že se ti defaultně
-spustí při loginu a zůstane běžet na pozadí, i když ho zrovna nepotřebuješ.
-Trochu jako Slack, Discord, nebo Telegram na Windows — ty běží taky
-furt, ale mají **iconku v systray**, aby ses mohl rozhodnout, jestli
-je chceš mít aktivní, nebo je na chvíli umrtvit.
+Hermes Agent is a perfectly good piece of software, but its
+`hermes-gateway` runs as a **`systemd --user` service** — which means
+it starts automatically at login and stays running in the background
+forever, even when you don't need it. A bit like Slack, Discord, or
+Telegram on Windows: those run all the time too, but they give you
+**a tray icon** so you can decide whether you want them active or
+paused.
 
-Hermes tohle (zatím) nemá. Přišlo mi to škoda, a tak vznikl
-**tray4hermes** — malý Python tray, který:
+Hermes (currently) doesn't have that. I thought that was a shame,
+and so **tray4hermes** was born — a small Python tray that:
 
-- **ukazuje stav gateway** přímo v KDE liště (zelená/oranžová/červená),
-- **umožňuje Start / Stop / Restart** bez nutnosti otevírat terminál,
-- **přepíná profily** (`default`, `work`, `off`…) z menu,
-- **zobrazuje logy** v docela vyladěném vieweru (barevné levely,
-  filtry, hledání, traceback-aware, time-window),
-- a hlavně — **nesnaží se být chytřejší než samotný Hermes**. Jen
-  pozoruje, občas klikne, a mluví přes standardní `systemctl`.
+- **shows the gateway state** directly in the KDE panel (green/orange/red)
+- **lets you Start / Stop / Restart** without opening a terminal
+- **switches profiles** (`default`, `work`, `off`…) from a menu
+- **displays logs** in a rather polished viewer (colored levels,
+  filters, search, traceback-aware, time-window)
+- **doesn't try to be smarter than Hermes itself**. It observes,
+  occasionally clicks, and talks to the standard `systemctl` API.
 
-Pokud ti tedy vyhovuje filozofie "Hermes běží jen když chci, a já vidím
-co se děje" — tohle je pro tebe.
+So if you like the philosophy of "Hermes runs only when I want it
+to, and I can see what's going on" — this is for you.
 
 > ⚠️ **Disclaimer:** tray4hermes is a *passive convenience addon*, not an
-> official Hermes Agent component. Hermes Agent can run perfectly well
+> official Hermes Agent component. Hermes Agent runs perfectly well
 > without it. Use it if you like it; ignore it if you don't.
 
 ---
 
 ## Features
 
-- 📊 **Live status icon** v system trayi (🟢 active, 🟠 warming,
-   🔵 activating, ⚫ inactive, 🔴 failed, ⚪ unknown)
-- ▶️ **Start / Stop / Restart** of `hermes-gateway.service` z jednoho kliku
+- 📊 **Live status icon** in the system tray (🟢 active, 🟠 warming,
+  🔵 activating, ⚫ inactive, 🔴 failed, ⚪ unknown)
+- ▶️ **Start / Stop / Restart** of `hermes-gateway.service` in a single click
 - 🔄 **Profile switcher** submenu, driven by `~/.hermes/profiles/`
-- 📋 **Log viewer** — *see below*, je to docela vyladěné
-- ⚙️ **Open Hermes config** v default editoru
-- 💻 **Launch Hermes CLI** v novém terminálu
+- 📋 **Log viewer** — *see below*, it's quite polished
+- ⚙️ **Open Hermes config** in your default editor
+- 💻 **Launch Hermes CLI** in a new terminal
 
 ### Log viewer
 
-`~/.hermes/logs/gateway.log` je často obrovský soubor plný tracebacků,
-který je potřeba *rychle* projít, ne číst od shora dolů. Proto viewer
-nabízí:
+`~/.hermes/logs/gateway.log` is often a huge file full of stack traces
+that you need to scroll through *quickly*, not read top-to-bottom. So
+the viewer offers:
 
-- **Barevné log levely**: `DEBUG` šedá, `INFO` bílá, `WARNING` žlutá,
-  `ERROR` červená, `CRITICAL` červená + celořádkový highlight
-- **Line number gutter** jako Qt Creator/VS Code
-- **Filtry per level** (toggle na toolbaru) — vidíš jen to, co chceš
-- **TRACEBACK toggle** — zvláštní kategorie pro stack trace; můžeš je
-  vypnout a vidět jen zprávy, nebo naopak
-- **Time-window filter** (Vše / 5m / 15m / 1h / 6h / 24h) — vidíš
-  jen logy z poslední hodiny apod.
-- **Reverse order** (Obrátit) — přepne na `journalctl` styl
-  (nejnovější nahoře)
-- **Max řádků** spinbox — rolling buffer (0 = unlimited)
+- **Coloured log levels**: `DEBUG` gray, `INFO` white, `WARNING` yellow,
+  `ERROR` red, `CRITICAL` red + full-row highlight
+- **Line-number gutter** like Qt Creator / VS Code
+- **Per-level filters** (toolbar toggles) — show only what you want
+- **TRACEBACK toggle** — a separate category for stack traces; turn
+  it off to see only messages, or on to keep both
+- **Time-window filter** (All / 5m / 15m / 1h / 6h / 24h) — show only
+  logs from the last hour, etc.
+- **Reverse order** — flip to `journalctl` style (newest at top)
+- **Max lines** spinbox — rolling buffer (0 = unlimited)
 - **Search** (`Ctrl+F` → `F3` next, `Shift+F3` prev, `Esc` close)
-- **Auto-scroll toggle** (default ON; OFF = zachová pozici při refresh)
+- **Auto-scroll toggle** (default ON; OFF = preserve position on refresh)
 - **Word-wrap toggle**
-- **Copy / Clear / Refresh** akce
+- **Copy / Clear / Refresh** actions
 - **Settings dialog** (font size, max lines, per-level visibility, …)
-- **Persisted** — všechna nastavení se ukládají do
+- **Persisted** — all settings are saved to
   `~/.config/tray4hermes/state.json`
 
 ![Log viewer demo](docs/images/log_viewer.png)
 
-Screenshot výše ukazuje DEBUG řádek šedě a WARNING řádek žlutě (s
-`WARNING` tokenem zvýrazněným), s line numbers vlevo a status barem
-dole. Stejný dialog na tvém systému bude mít tvoje reálná log data
-– tento screenshot je ze sandboxového testu, kde se do fake
-gateway.log nasypaly dva ilustrační řádky.
+The screenshot above shows a DEBUG line in gray and a WARNING line in
+yellow (with the `WARNING` token highlighted), line numbers on the
+left, and the status bar at the bottom. On your system the same
+dialog will show your real log data — this screenshot is from a
+sandboxed test that writes a couple of illustrative lines to a fake
+gateway.log.
+
+> The toolbar UI strings are in Czech (`Max řádků`, `Hledat`,
+> `Nastavení`…) because the original developer is Czech and finds
+> the context easy to follow. If you'd like an English localization,
+> see [Roadmap → Localization](#roadmap-next-up-ideas).
 
 ---
 
@@ -135,147 +144,150 @@ The tray combines two sources of truth into six discrete states:
 | `failed` | 🔴 | systemd unit failed |
 | `unknown` | ⚫ | Cannot determine state (both sources unavailable) |
 
-`gateway_state.json` is the primary source when fresh (< 30 s old);
+`gateway_state.json` is the primary source when fresh (< 1 hour old);
 `systemctl is-active` is the fallback. The two-source design avoids
 the OAuth warm-up race where the systemd unit shows `active` for a few
 seconds before the first model call actually succeeds.
 
 ## Requirements
 
-- **Linux** (testováno primárně na **Manjaro KDE**; mělo by fungovat
-  na libovolné distře s KDE Plasma 5, viz [Platform support](#platform-support))
-- **KDE Plasma 5** (Plasma 6 používá Qt6 — tray4hermes je Qt5; port na
-  Qt6 je v Roadmapě)
+- **Linux** (developed primarily on **Manjaro KDE**; should work on
+  any distro with KDE Plasma 5, see [Platform support](#platform-support))
+- **KDE Plasma 5** (Plasma 6 uses Qt6 — tray4hermes is Qt5; Qt6 port
+  is in the Roadmap)
 - Python ≥ 3.11
-- Running `hermes-gateway.service` under `systemd --user`
+- A running `hermes-gateway.service` under `systemd --user`
 - `loginctl enable-linger $USER` for autostart after logout
 
 ## Platform support
 
-**Primárně vyvinuto a testováno na Manjaro KDE** (rolling release,
+**Primarily developed and tested on Manjaro KDE** (rolling release,
 Plasma 5, `xcb` X11 backend).
 
-**Nativně by mělo fungovat na jakémkoli Linuxu, který má:**
+**Should work natively on any Linux that has:**
 
-1. **Qt5 + PyQt5 nebo PySide2** (`python -c "from PyQt5.QtWidgets import QSystemTrayIcon; print('OK')"`
-   by mělo projít)
-2. **DBus session bus** (`echo $DBUS_SESSION_BUS_ADDRESS` by měl být
-   nastavený — typicky automaticky v desktop session)
-3. **System tray implementaci** respektující freedesktop.org Spec
-   (KDE Plasma, Xfce, LXQt, Cinnamon, MATE, GNOME s rozšířením,
-   Elementary OS s rozšířením…)
-4. **systemd --user** (nebo něco kompatibilního — OpenRC, runit
-   alternativy mají `hermes-gateway` API trochu jinde; bude potřeba
-   adaptér v `paths.py`)
+1. **Qt5 + PyQt5 or PySide2** (`python -c "from PyQt5.QtWidgets import QSystemTrayIcon; print('OK')"`
+   should succeed)
+2. **DBus session bus** (`echo $DBUS_SESSION_BUS_ADDRESS` should be
+   set — typically automatic in a desktop session)
+3. **A system tray implementation** respecting the freedesktop.org
+   SNI spec (KDE Plasma, Xfce, LXQt, Cinnamon, MATE, GNOME with
+   extension, Elementary OS with extension…)
+4. **systemd --user** (or something compatible — OpenRC / runit
+   alternatives have a slightly different `hermes-gateway` API;
+   an adapter in `paths.py` would be needed)
 
-### Testováno
+### Tested
 
-| Distro / DE | Stav | Poznámky |
-|-------------|------|----------|
-| **Manjaro KDE** | ✅ primární | výchozí platforma pro vývoj a testy |
-| Arch Linux + KDE | 🟡 mělo by fungovat | prakticky totožné s Manjaro, jen balíčky z `extra` místo AUR |
-| **Ubuntu + KDE** | 🟡 mělo by fungovat | viz níže |
-| Fedora + KDE | 🟡 mělo by fungovat | `dnf install python3-pyqt5` |
-| openSUSE + KDE | 🟡 mělo by fungovat | `zypper install python3-PyQt5` |
-| CachyOS KDE | ✅ mělo by fungovat | Arch-based, prakticky identické |
+| Distro / DE | Status | Notes |
+|-------------|--------|-------|
+| **Manjaro KDE** | ✅ primary | default platform for development and tests |
+| Arch Linux + KDE | 🟡 should work | practically identical to Manjaro, just package from `extra` not AUR |
+| **Ubuntu + KDE** | 🟡 should work | see below |
+| Fedora + KDE | 🟡 should work | `dnf install python3-pyqt5` |
+| openSUSE + KDE | 🟡 should work | `zypper install python3-PyQt5` |
+| CachyOS KDE | ✅ should work | Arch-based, practically identical |
 
-### Ubuntu s Unity / GNOME / jinými
+### Ubuntu with Unity / GNOME / others
 
-Tohle je **tray aplikace**, takže hlavní rozdíl je v tray supportu:
+This is a **tray application**, so the main difference is tray support:
 
-- **Ubuntu + KDE Plasma** (`apt install kubuntu-desktop`) — mělo by
-  fungovat hned, akorát `python3-pyqt5` možná budeš muset doinstalovat
-  přes `apt install python3-pyqt5` nebo `pip install PyQt5`.
-- **Ubuntu + Unity (22.04+)** — Unity používá vlastní indicator tray,
-  ne SNI. Muselo by se upravit `icons.py` a `app.py` tak, aby se
-  registroval přes `dbus` na `com.canonical.Unity.LauncherEntry`.
-  Technicky možné, ale v tuto chvíli není implementované. Pokud na
-  Unity běžíš a chceš to — ozvi se v issues.
-- **Ubuntu + GNOME 41+** — GNOME záměrně **nepodporuje tray** (SNI
-  extension). Musíš doinstalovat rozšíření jako
-  [AppIndicator Support](https://extensions.gnome.org/extension/615/appindicator-support/),
-  pak by to mělo fungovat.
-- **Ubuntu + Cinnamon / MATE / XFCE** — všechny podporují SNI tray,
-  mělo by fungovat out-of-the-box.
+- **Ubuntu + KDE Plasma** (`apt install kubuntu-desktop`) — should work
+  out-of-the-box, you may need to install `python3-pyqt5` via `apt`
+  or `pip install PyQt5` for yourself.
+- **Ubuntu + Unity (22.04+)** — Unity uses its own indicator tray,
+  not SNI. We would need to adapt `icons.py` and `app.py` so they
+  register via DBus at `com.canonical.Unity.LauncherEntry`. Technically
+  possible, but not implemented today. If you run Unity and want this
+  — open an issue.
+- **Ubuntu + GNOME 41+** — GNOME intentionally **does not support
+  tray** without an SNI extension. You have to install an extension
+  like [AppIndicator Support](https://extensions.gnome.org/extension/615/appindicator-support/),
+  then it should work.
+- **Ubuntu + Cinnamon / MATE / XFCE** — all support SNI tray, should
+  work out-of-the-box.
 
-### Praktické doporučení pro Ubuntu uživatele
+### Practical recommendation for Ubuntu users
 
-Krátká verze: **nainstaluj si KDE Plasma** a bude ti to fungovat s
-největší pravděpodobností. Ne úplně nejmenší balíček, ale nejčistší
-cesta.
+Short version: **install KDE Plasma** and it will work with the
+highest probability. Not the smallest package, but the cleanest path.
 
 ```bash
-# 1. Nainstaluj KDE Plasma desktop (meta-package, ~600 MB)
+# 1. Install KDE Plasma desktop (meta-package, ~600 MB)
 sudo apt install kde-plasma-desktop
 
-# 2. Odhlas se. Na login screen vyber "Plasma" session, prihlas se.
+# 2. Log out. On the login screen, choose the "Plasma" session, log in.
 
-# 3. V terminalu v KDE session:
+# 3. In a terminal inside the KDE session:
 sudo apt install python3-pyqt5    # system PyQt5
-python3 -m pip install --user tray4hermes  # nebo z GitHubu
-python3 -m tray4hermes             # spusti tray
+python3 -m pip install --user tray4hermes  # or from GitHub
+python3 -m tray4hermes             # start the tray
 
-# 4. Pro autostart po loginu:
-cp /usr/local/share/tray4hermes/hermes-tray.desktop ~/.config/autostart/
-# (nebo ho vytvor rucne — cesta v installation sekci)
+# 4. For autostart after login:
+# The .desktop file ships inside the installed wheel at:
+#   /usr/local/lib/python3.*/site-packages/tray4hermes/data/tray4hermes.desktop
+# (resolve with `python3 -c "import tray4hermes; import os; \
+#   print(os.path.join(os.path.dirname(tray4hermes.__file__), 'data', 'tray4hermes.desktop'))"`)
+# Copy it to ~/.config/autostart/ and edit the Exec= path to point at
+# your installed tray4hermes.
 ```
 
-**Proč to doporučujeme:**
+**Why we recommend this:**
 
-1. **Hermes Agent** funguje na Ubuntu úplně stejně jako na Manjaro
-   (oba jsou Linux, oba mají systemd --user, oba mají Python 3.11+).
-   *Žádný* rozpor s Ubuntu.
-2. **KDE Plasma tray** implementuje SNI specifikaci úplně nejlíp ze
-   všech DE — žádný workaround, žádné rozšíření, žádné "možná
-   funguje".
-3. **Vyšší šance na úspěch z prvního pokusu.** Místo 75-95% u GNOME/Cinnamon
-   s workaroundem dostaneš ~99%.
+1. **Hermes Agent** runs on Ubuntu exactly the same as on Manjaro
+   (both are Linux, both have systemd --user, both have Python 3.11+).
+   *No* inherent incompatibility with Ubuntu.
+2. **KDE Plasma's tray** implements the SNI spec most thoroughly of
+   any DE — no workaround, no extension, no "maybe works".
+3. **Higher chance of first-try success.** Instead of 75–95% with GNOME
+   / Cinnamon + workaround, you get ~99%.
 
-**Alternativa pro puristy:** pokud na GNOME trváš a chceš to opravdu
-rozjet tam, postupuj podle instrukcí v sekci `Ubuntu + GNOME 41+`
-výše. Ale není to triviální první zkušenost.
+**Alternative for purists:** if you insist on GNOME and really want
+this to work there, follow the instructions in the `Ubuntu + GNOME 41+`
+section above. But it's not a trivial first experience.
 
-### Budoucí testování
+### Future testing
 
-**Vlastní Ubuntu VM**: pokud by komunita přinesla reálný zájem o
-Ubuntu podporu, rádi bychom v rámci CI rozjeli jednoduchou
-**Ubuntu LTS VM** (VirtualBox nebo LXC) s KDE Plasma a pustili
-smoke test — `tray4hermes` start → menu ikona se ukáže →
-klikne se na Start/Stop → ověří se, že `systemctl --user` reaguje.
-Náklady by byly: ~1-2 dny na setup + skripty. Aktuálně to nemáme,
-protože poptávka je momentálně **nula** (Manjaro/KDE pokrývá ~95%
-uživatelů, kteří nám psali). Pokud bys chtěl, můžeme přidat do
-Roadmapy. Otevři issue s `+1` a hlasem, nebo rovnou přijď na
-contributing call. 🙂
+**A dedicated Ubuntu VM**: if the community brings real demand for
+Ubuntu support, we'd happily spin up a simple **Ubuntu LTS VM**
+(VirtualBox or LXC) with KDE Plasma in CI and run a smoke test —
+`tray4hermes` starts → menu icon appears → click Start/Stop → verify
+that `systemctl --user` responds. Cost would be ~1–2 days of setup +
+scripts. We don't have it right now, because demand is currently
+**zero** (Manjaro/KDE covers ~95% of users who have written to us).
+If you'd like it, add it to the Roadmap. Open an issue with a `+1`
+and a vote, or just show up to a contributing call. 🙂
 
 ### Troubleshooting
 
-Když se tray **vůbec neukáže** v jiné distribuci:
+If the tray **doesn't show** on another distro:
 
 ```bash
-# 1. Ověř že Qt5 vidí system tray
+# 1. Verify Qt5 sees a system tray
 python -c "from PyQt5.QtWidgets import QSystemTrayIcon, QApplication; \
            app = QApplication([]); print('available:', QSystemTrayIcon.isSystemTrayAvailable())"
 
-# 2. Zkontroluj jestli DBus běží
+# 2. Check whether DBus is running
 echo "DBus session bus: $DBUS_SESSION_BUS_ADDRESS"
 dbus-launch --autolaunch=output-file=/tmp/dbus.out
 
-# 3. Zkus explicit-nastavit XDG
+# 3. Try explicit XDG
 export XDG_CURRENT_DESKTOP=KDE
 export XDG_SESSION_TYPE=x11
 tray4hermes --debug
 ```
 
-Pokud `QSystemTrayIcon.isSystemTrayAvailable()` vrátí `False`, je to
-**distro/desktop combo problém**, ne chyba v tray4hermes. Můžeš:
-- otevřít issue s výstupem `python -c "import sys; print(sys.platform, ...")`
-  + verze Qt (`PyQt5.QtCore.PYQT_VERSION_STR`)
-- zeptat se v Hermes komunitě (nebo rovnou u nás v issues, pomůžeme
-  rozšířit `paths.py` o tvůj setup)
+If `QSystemTrayIcon.isSystemTrayAvailable()` returns `False`, it's a
+**distro/desktop combo problem**, not a tray4hermes bug. You can:
+- open an issue with the output of `python -c "import sys; print(sys.platform, …)"`
+  plus your Qt version (`PyQt5.QtCore.PYQT_VERSION_STR`)
+- ask in the Hermes community (or directly with us in issues, we'll
+  help extend `paths.py` for your setup)
 
-Chceme, aby to fungovalo **všude** kde má hermes-agent šanci běžet.
-Takže distrospecifické PR jsou vítané.
+We want it to work **everywhere** Hermes Agent has a chance of running.
+So distro-specific PRs are very welcome.
+
+---
 
 ## Installation
 
@@ -290,13 +302,18 @@ pipx install tray4hermes
 Then enable autostart:
 
 ```bash
-cp hermes-tray.desktop ~/.config/autostart/
+# Find where the .desktop file ended up after pip install
+DESKTOP_FILE=$(python3 -c "import tray4hermes, os; \
+  print(os.path.join(os.path.dirname(tray4hermes.__file__), 'data', 'tray4hermes.desktop'))")
+cp "$DESKTOP_FILE" ~/.config/autostart/tray4hermes.desktop
+# Adjust the Exec= line to point at your installed tray4hermes script
+# (the wheel ships it at <prefix>/bin/tray4hermes).
 ```
 
 ### Development (editable)
 
 ```bash
-git clone https://github.com/HERMbuddy/tray4hermes.git
+git clone https://github.com/MoDD0/tray4hermes.git
 cd tray4hermes
 uv pip install --system -e ".[dev]"
 ./scripts/dev.sh   # installs deps + runs tests
@@ -319,12 +336,23 @@ python -m tray4hermes
 
 This package **does not handle any credentials, tokens, or secrets**.
 The only file it writes is `~/.config/tray4hermes/state.json`, which
-contains the currently-selected profile name and a schema version:
+contains the currently-selected profile name, log-viewer preferences,
+and a schema version:
 
 ```json
 {
   "version": 1,
-  "selected_profile": "default"
+  "selected_profile": "default",
+  "log_settings": {
+    "max_lines": 2000,
+    "auto_scroll": true,
+    "word_wrap": false,
+    "font_size": 9,
+    "show_levels": ["ERROR", "WARNING", "INFO", "DEBUG", "CRITICAL", "TRACE"],
+    "show_tracebacks": true,
+    "time_window_minutes": 0,
+    "reverse_order": false
+  }
 }
 ```
 
@@ -387,29 +415,34 @@ pre-commit run --all-files
 tray4hermes/
 ├── pyproject.toml            # PEP 621, uv-friendly, exact-pinned deps
 ├── LICENSE                   # MIT
-├── README.md
+├── README.md                 # English (this file)
+├── docs/
+│   ├── README.cs.md          # Czech version
+│   └── images/
+│       └── log_viewer.png    # screenshot for README
 ├── .gitignore                # incl. secret patterns
 ├── .pre-commit-config.yaml
 ├── run.sh                    # watchdog wrapper
-├── hermes-tray.desktop       # KDE autostart
 ├── scripts/
 │   └── dev.sh                # install + test convenience
 ├── src/
 │   └── tray4hermes/
-│       ├── __init__.py       # __version__
-│       ├── __main__.py       # python -m tray4hermes
+│       ├── __init__.py       # __version__ (single source of truth)
+│       ├── __main__.py       # python -m tray4hermes (argparse entry)
 │       ├── app.py            # HermesTray QObject glue
 │       ├── state.py          # @dataclass + aggregation logic
 │       ├── paths.py          # all filesystem constants
 │       ├── icons.py          # QPainter icon factory
 │       ├── lock.py           # single-instance lock
-│       ├── logs_view.py      # LogDialog
-│       └── py.typed          # PEP 561 marker
+│       ├── logs_view.py      # LogDialog (full-featured viewer)
+│       ├── py.typed          # PEP 561 marker
+│       └── data/
+│           └── tray4hermes.desktop  # ships inside the wheel
 └── tests/
     ├── conftest.py
     ├── test_state.py         # pure-Python, ~30 tests
     ├── test_lock.py          # pure-Python, ~5 tests
-    └── test_app.py           # Qt offscreen, ~4 tests
+    └── test_app.py           # Qt offscreen, ~20 tests
 ```
 
 ## License
@@ -420,77 +453,90 @@ MIT — see [LICENSE](LICENSE).
 
 ## Contributing
 
-Issues, comments, návrhy — všechno vítáno. Ať už je to:
+Issues, comments, suggestions — all welcome. Whether it's:
 
-- 🐛 **Bug report** — ideálně s výstupem z `~/.hermes/logs/gateway.log`
-  a `tray4hermes --debug` logu
-- 💡 **Feature request** — krátký popis, k čemu by to bylo. Nevadí mi
-  "wild" nápady (jiný backend, Wayland support, custom ikony…),
-  posoudíme
-- 🎨 **UI tweak** — barvy, layout, fonty, tooltips. Tohle je doména,
-  kde se nejvíc projeví vkus contributorů
-- 📖 **Documentation** — chybí tady mockupy screenshot log vieweru,
-  klidně přidejte
-- 🌍 **Localization** — momentálně UI je v češtině. Pokud by se to
-  hodilo v jiných jazycích, brzo dodám `_()` wrappers
+- 🐛 **Bug report** — ideally with output from
+  `~/.hermes/logs/gateway.log` and `tray4hermes --debug` output
+- 💡 **Feature request** — short description of what it would be
+  for. We don't mind "wild" ideas (different backend, Wayland
+  support, custom icons…). Worth a discussion.
+- 🎨 **UI tweak** — colours, layout, fonts, tooltips. This is
+  the area where contributor taste matters most.
+- 📖 **Documentation** — screenshots of the log viewer are missing;
+  feel free to add them
+- 🌍 **Localization** — currently the UI is in Czech (except the
+  README, which is English here). If you need it in another language,
+  I'll add `_()` wrappers soon
+- 🐧 **Distro-specific fixes** — see [Platform support](#platform-support).
+  Every distro we test on is a contribution away
 
-### Jak poslat PR / patch
+### How to send a PR / patch
 
 ```bash
-git clone https://github.com/HERMbuddy/tray4hermes.git
+git clone https://github.com/MoDD0/tray4hermes.git
 cd tray4hermes
-./scripts/dev.sh            # nainstaluje deps, spustí testy
-# proveďte změnu
-./scripts/dev.sh -v         # re-run testy s verbose
+./scripts/dev.sh            # installs deps, runs tests
+# make your change
+./scripts/dev.sh -v         # re-run tests with verbose
 uv run ruff check src tests
 uv run ruff format src tests
-git commit -m "popis"
+git commit -m "description"
 git push
 ```
 
-Pravidla (pružná):
+Rules (flexible):
 
-1. **Nerozbij testy.** 56 testů musí zůstat zelených.
-2. **Nepřidávej nové runtime závislosti** bez diskuze — balíček má
-   jedinou závislost (`PyQt5`), a chceme to tak udržet.
-3. **Bez tajných dat** v diffu (`grep -rE "sk-[a-z0-9]{16,}|api_key.*[a-z0-9]{20,}"`).
-4. **Žádné úpravy `~/.hermes/*`** zevnitř tray — to je owned Hermes Agent.
-5. **MIT-compatible contributions.** Pokud přidáváš kód, drž se MIT.
+1. **Don't break the tests.** 56 tests must stay green.
+2. **Don't add new runtime dependencies** without discussion — the
+   package has one runtime dependency (`PyQt5`), and we want to keep it
+   that way.
+3. **No secrets in the diff**
+   (`grep -rE "sk-[a-z0-9]{16,}|api_key.*[a-z0-9]{20,}"`).
+4. **No writes to `~/.hermes/*`** from inside the tray — that area is
+   owned by Hermes Agent.
+5. **MIT-compatible contributions.** If you're adding code, stick to
+   the MIT license.
 
-Pokud se ti líbí tenhle projekt a přemýšlíš o něčem, **klidně se ozvi**
-v issues — diskutujeme a najdeme společné řešení. I drobnost jako
-"tohle slovo se mi nelíbí v překladu" je vítaná.
+If you like this project and have an idea, **just open an issue** —
+we'll discuss it. Even "this word doesn't sound right in the
+translation" is welcome feedback.
 
 ---
 
 ## Roadmap (next-up ideas)
 
-Něco, co se mi honí hlavou, ale ještě není hotovo. Pokud tě něco z toho
-zajímá víc než zbytek, dej vědět:
+A few things on my mind that aren't done yet. If any of these
+interests you more than the rest, speak up:
 
-- **Wayland support** — momentálně jsem `xcb` (X11) jen kvůli
-  KDE Plasma tray API; Plasma 6 + Qt6 by otevřelo Wayland. PR vítán.
-- **Custom ikony per status** — SVG ikony místo `QPainter` raster
-- **Log search across sessions** (FTS5 přes sessions DB)
-- **Notifications on ERROR** — toast přes `D-Bus` když gateway
-  napíše traceback (líbí se mi to, ale je to otázka vkusu)
-- **Settings export/import** — sdílení presetů log vieweru mezi
-  profily
+- **Wayland support** — currently `xcb` (X11) only because of the
+  KDE Plasma tray API; Plasma 6 + Qt6 would open Wayland. PRs welcome.
+- **Custom icons per status** — SVG icons instead of `QPainter` raster
+- **Log search across sessions** (FTS5 over the sessions DB)
+- **Notifications on ERROR** — toast over D-Bus when the gateway
+  writes a traceback (I like it, but it's a matter of taste)
+- **Settings export/import** — sharing log-viewer presets between
+  profiles
+- **Ubuntu LTS CI VM** — see [Platform support → Future testing](#future-testing)
+- **i18n** — wrap the UI strings with `gettext` and ship an English
+  translation
+- **Plasma 6 / Qt6 port** — for the day Manjaro ships Plasma 6 by
+  default
 
 ---
 
 ## Credits & thanks
 
-**Vyvinuto s využitím MiniMax M3** (`MiniMax-M3` přes `MiniMax OAuth`),
-jak hlavní model pro kód, tak pro revize. Většina kódu v této verzi
-vznikla v rámci testování AI-asistovaného vývoje — od diagnózy bugů
-přes refaktoring až po celý přepis `logs_view.py` z 59 řádků na 800+.
-Pokud M3 (nebo jeho budoucí iterace) udělá chybu v něčem co tady mám,
-je to moje chyba — finální review a commity jsou moje.
+**Developed with the help of MiniMax-M3** (`MiniMax-M3` via
+`minimax-oauth`), as the primary model for coding and review. Most
+of the code in v2.0 was produced as part of an AI-assisted
+development test — from bug diagnosis through refactoring to the
+full rewrite of `logs_view.py` from 59 lines to 800+. If M3 (or a
+future iteration) makes a mistake in something I have here, that's
+on me — final review and commits are mine.
 
-Díky [@NousResearch](https://github.com/NousResearch) za Hermes Agent
-a obecně za celý ekosystém open-source AI agentů.
+Thanks to [@NousResearch](https://github.com/NousResearch) for
+Hermes Agent, and to the wider open-source AI-agent ecosystem.
 
-A díky kterémukoli contributorovi, který se tu objeví — ať už s PR,
-nebo jenom s issue. Tohle je malý projekt, ale malé projekty mají
-tendenci žít déle než velké. 😉
+And thanks to any contributor who shows up here — whether with a PR
+or just with an issue. This is a small project, but small projects
+tend to outlast big ones. 😉
