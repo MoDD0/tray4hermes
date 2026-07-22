@@ -54,6 +54,12 @@ to, and I can see what's going on" — this is for you.
 
 ## Features
 
+![KDE Plasma tray with tray4hermes icon](docs/images/kde_tray.png)
+
+*Above: a real KDE Plasma 5 tray, the tray4hermes icon slots in next
+to your other SNI apps. Screenshot from a Manjaro KDE session where
+this tray is live.*
+
 - 📊 **Live status icon** in the system tray (🟢 active, 🟠 warming,
   🔵 activating, ⚫ inactive, 🔴 failed, ⚪ unknown)
 - ▶️ **Start / Stop / Restart** of `hermes-gateway.service` in a single click

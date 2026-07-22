@@ -53,6 +53,11 @@ co se děje" — tohle je pro tebe.
 
 ## Features
 
+![KDE Plasma tray s tray4hermes ikonkou](../images/kde_tray.png)
+
+*Výše: reálná KDE Plasma 5 lišta; tray4hermes ikona se objeví vedle
+tvých dalších SNI aplikací. Screenshot z Manjaro KDE session.*
+
 - 📊 **Live status icon** v systray (🟢 active, 🟠 warming,
   🔵 activating, ⚫ inactive, 🔴 failed, ⚪ unknown)
 - ▶️ **Start / Stop / Restart** `hermes-gateway.service` jedním kliknutím
