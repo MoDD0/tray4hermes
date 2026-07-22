@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import (
     QAction,
     QActionGroup,
     QApplication,
+    QDialog,
     QMenu,
     QMessageBox,
     QSystemTrayIcon,
@@ -154,6 +155,10 @@ class HermesTray:
         self._logs_action.triggered.connect(self._show_logs)
         menu.addAction(self._logs_action)
 
+        self._tray_settings_action = QAction(_("⚙  Nastavení tray4hermes"), menu)
+        self._tray_settings_action.triggered.connect(self._open_tray_settings)
+        menu.addAction(self._tray_settings_action)
+
         self._open_config_action = QAction(_("⚙  Hermes config"), menu)
         self._open_config_action.triggered.connect(self._open_config)
         menu.addAction(self._open_config_action)
@@ -239,6 +244,38 @@ class HermesTray:
 
     def _show_logs(self) -> None:
         LogDialog().exec_()
+
+    def _open_tray_settings(self) -> None:
+        """Open the global Tray4Hermes settings dialog.
+
+        This is NOT the log viewer's settings (those live in
+        LogSettingsDialog inside the log viewer). This is the
+        tray-level control panel: language, default max lines,
+        default levels, etc.
+        """
+        from tray4hermes.tray_settings import (
+            TraySettingsDialog,
+            load_tray_settings,
+            save_tray_settings,
+        )
+
+        current = load_tray_settings()
+        dlg = TraySettingsDialog(current, self)
+        if dlg.exec_() == QDialog.Accepted:
+            new_settings = dlg.result_settings()
+            save_tray_settings(new_settings)
+            # If language changed, switch the gettext binding.
+            # Existing widget strings stay in the old language
+            # until the tray is rebuilt (restart).
+            if new_settings.language != current.language:
+                try:
+                    from tray4hermes.i18n import switch_language
+
+                    switch_language(new_settings.language or "en")
+                except Exception as e:  # noqa: BLE001
+                    import sys as _sys
+
+                    print(f"[tray4hermes] language switch failed: {e}", file=_sys.stderr)
 
     def _open_config(self) -> None:
         config = _paths.config_yaml()

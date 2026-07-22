@@ -212,3 +212,47 @@ msgstr ""
 
 msgid "all"
 msgstr "Vše"
+
+#: src/tray4hermes/app.py:156
+msgid "⚙  Nastavení tray4hermes"
+msgstr "⚙  Nastavení tray4hermes"
+
+#: src/tray4hermes/tray_settings.py:206
+msgid "Nastavení tray4hermes"
+msgstr "Nastavení tray4hermes"
+
+#: src/tray4hermes/tray_settings.py:210
+msgid "Jazyk rozhraní:"
+msgstr "Jazyk rozhraní:"
+
+#: src/tray4hermes/tray_settings.py:211
+msgid "Systémový (dle locale)"
+msgstr "Systémový (dle locale)"
+
+#: src/tray4hermes/tray_settings.py:225
+msgid "ℹ Změna jazyka se projeví po restartu tray4hermes."
+msgstr "ℹ Změna jazyka se projeví po restartu tray4hermes."
+
+#: src/tray4hermes/tray_settings.py:231
+msgid "Výchozí nastavení logů"
+msgstr "Výchozí nastavení logů"
+
+#: src/tray4hermes/tray_settings.py:235
+msgid "Výchozí počet řádků:"
+msgstr "Výchozí počet řádků:"
+
+#: src/tray4hermes/tray_settings.py:241
+msgid "0 = bez limitu"
+msgstr "0 = bez limitu"
+
+#: src/tray4hermes/tray_settings.py:245
+msgid "Auto-scroll od startu"
+msgstr "Auto-scroll od startu"
+
+#: src/tray4hermes/tray_settings.py:250
+msgid "Zalamovat od startu"
+msgstr "Zalamovat od startu"
+
+#: src/tray4hermes/tray_settings.py:254
+msgid "Výchozí viditelné úrovně:"
+msgstr "Výchozí viditelné úrovně:"
