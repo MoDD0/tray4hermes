@@ -51,12 +51,15 @@ from tray4hermes import __version__
 from tray4hermes import paths as _paths
 
 # After `i18n.install(...)` runs (in __main__), `tray4hermes.i18n._`
-# is bound to the active translation. Until that happens — for
-# example when a test imports this module without going through
-# `__main__` — `_` falls back to a NullTranslations().gettext that
-# returns the source string verbatim.
+# is bound to the active translation. We use a *dynamic* lookup so
+# that switching languages at runtime is picked up by modules that
+# imported `_` at load time.
 try:
-    from tray4hermes.i18n import _ as _  # noqa: PLC0415
+    from tray4hermes import i18n as _i18n_mod
+
+    def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
+        """Dynamic gettext wrapper — looks up i18n._ on every call."""
+        return _i18n_mod._(s)  # type: ignore[attr-defined]
 except ImportError:
 
     def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
@@ -431,16 +434,16 @@ class LogSettingsDialog(QDialog):
 
     def __init__(self, current: LogSettings, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(_("Log viewer — nastavení"))
+        self.setWindowTitle(_("Log viewer — settings"))
         self.resize(420, 560)
         layout = QVBoxLayout(self)
 
         # ── Buffer & display ───────────────────────────────────────────
-        layout.addWidget(self._section_label(_("Zobrazení")))
+        layout.addWidget(self._section_label(_("Display")))
 
         # max lines
         row = QHBoxLayout()
-        row.addWidget(QLabel(_("Maximální počet řádků v bufferu:")))
+        row.addWidget(QLabel(_("Maximum lines in buffer:")))
         self._max_lines = QSpinBox()
         self._max_lines.setRange(0, 100_000)
         self._max_lines.setSingleStep(500)
@@ -456,7 +459,7 @@ class LogSettingsDialog(QDialog):
 
         # font size
         row = QHBoxLayout()
-        row.addWidget(QLabel(_("Velikost písma:")))
+        row.addWidget(QLabel(_("Font size:")))
         self._font_size = QSpinBox()
         self._font_size.setRange(6, 24)
         self._font_size.setValue(current.font_size)
@@ -465,12 +468,12 @@ class LogSettingsDialog(QDialog):
 
         # time window
         row = QHBoxLayout()
-        row.addWidget(QLabel(_("Časové okno:")))
+        row.addWidget(QLabel(_("Time window:")))
         self._time_window = QComboBox()
         # Internal keys → minutes; stable across translations.
         self._tw_keys = ["all", "5m", "15m", "1h", "6h", "24h"]
         self._tw_map = {"all": 0, "5m": 5, "15m": 15, "1h": 60, "6h": 360, "24h": 1440}
-        self._time_window.addItems([_("Vše") if k == "all" else k for k in self._tw_keys])
+        self._time_window.addItems([_("All") if k == "all" else k for k in self._tw_keys])
         # Select current
         idx = 0
         for i, k in enumerate(self._tw_keys):
@@ -482,9 +485,9 @@ class LogSettingsDialog(QDialog):
         layout.addLayout(row)
 
         # ── Behaviour toggles ──────────────────────────────────────────
-        layout.addWidget(self._section_label(_("Chování")))
+        layout.addWidget(self._section_label(_("Behavior")))
 
-        self._auto_scroll = QCheckBox(_("Auto-scroll na nové řádky"))
+        self._auto_scroll = QCheckBox(_("Auto-scroll on new lines"))
         self._auto_scroll.setChecked(current.auto_scroll)
         self._auto_scroll.setToolTip(
             _(
@@ -494,11 +497,11 @@ class LogSettingsDialog(QDialog):
         )
         layout.addWidget(self._auto_scroll)
 
-        self._word_wrap = QCheckBox(_("Zalamovat dlouhé řádky"))
+        self._word_wrap = QCheckBox(_("Wrap long lines"))
         self._word_wrap.setChecked(current.word_wrap)
         layout.addWidget(self._word_wrap)
 
-        self._reverse = QCheckBox(_("Obrátit pořadí (nejnovější nahoře)"))
+        self._reverse = QCheckBox(_("Reverse order (newest first)"))
         self._reverse.setChecked(current.reverse_order)
         self._reverse.setToolTip(
             _(
@@ -508,7 +511,7 @@ class LogSettingsDialog(QDialog):
         )
         layout.addWidget(self._reverse)
 
-        self._show_tracebacks = QCheckBox(_("Zobrazit tracebacky (stack traces)"))
+        self._show_tracebacks = QCheckBox(_("Show tracebacks (stack traces)"))
         self._show_tracebacks.setChecked(current.show_tracebacks)
         self._show_tracebacks.setToolTip(
             _(
@@ -519,8 +522,8 @@ class LogSettingsDialog(QDialog):
         layout.addWidget(self._show_tracebacks)
 
         # ── Level filters ──────────────────────────────────────────────
-        layout.addWidget(self._section_label(_("Filtrování úrovní")))
-        layout.addWidget(QLabel(_("Zobrazované úrovně:")))
+        layout.addWidget(self._section_label(_("Level filtering")))
+        layout.addWidget(QLabel(_("Visible levels:")))
         self._level_checks: dict[str, QCheckBox] = {}
         for level in ("ERROR", "WARNING", "INFO", "DEBUG", "TRACE"):
             cb = QCheckBox(level)
@@ -530,14 +533,14 @@ class LogSettingsDialog(QDialog):
             layout.addWidget(cb)
 
         # ── Language ──────────────────────────────────────────────────
-        layout.addWidget(self._section_label(_("Jazyk")))
+        layout.addWidget(self._section_label(_("Language")))
         row = QHBoxLayout()
-        row.addWidget(QLabel(_("Jazyk rozhraní:")))
+        row.addWidget(QLabel(_("Interface language:")))
         self._language = QComboBox()
         # The first entry is always "System (follow locale)"; the rest
         # are populated from i18n.available_languages().
         self._lang_keys: list[str | None] = [None]
-        self._language.addItem(_("Systémový (dle locale)"))
+        self._language.addItem(_("System (follow locale)"))
         # Always offer English explicitly — it's the canonical source
         # language, so even without a compiled .mo the user should
         # be able to pick it (it means "no translation, source strings").
@@ -573,7 +576,7 @@ class LogSettingsDialog(QDialog):
         layout.addLayout(row)
 
         # Hint about restart
-        hint = QLabel(_("ℹ Změna jazyka se projeví po restartu tray4hermes."))
+        hint = QLabel(_("ℹ Language change takes effect after restarting tray4hermes."))
         hint.setWordWrap(True)
         hint.setStyleSheet("color: gray; font-size: 9pt;")
         layout.addWidget(hint)
@@ -620,7 +623,7 @@ class LogDialog(QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle(
-            _("Hermes Gateway — logy (tray4hermes v{version})").format(version=__version__)
+            _("Hermes Gateway — logs (tray4hermes v{version})").format(version=__version__)
         )
         self.resize(900, 500)
 
@@ -673,7 +676,7 @@ class LogDialog(QDialog):
         tb.setIconSize(QSize(16, 16))
 
         # Buffer-size spinner — how many tail lines to keep. 0 = no limit.
-        tb.addWidget(QLabel(_("Max řádků: ")))
+        tb.addWidget(QLabel(_("Max lines: ")))
         self._max_lines_spin = QSpinBox()
         self._max_lines_spin.setRange(0, 100_000)
         self._max_lines_spin.setSingleStep(500)
@@ -687,7 +690,7 @@ class LogDialog(QDialog):
 
         # Time-range filter — only show lines newer than this many minutes.
         tb.addSeparator()
-        tb.addWidget(QLabel(_("Čas: ")))
+        tb.addWidget(QLabel(_("Time: ")))
         self._time_combo = QComboBox()
         # We label the combo boxes by their translated text but
         # match user-visible choice back to a stable internal key
@@ -705,14 +708,14 @@ class LogDialog(QDialog):
                 current_label = internal_key
                 break
         self._time_combo.setCurrentIndex(self._time_keys.index(current_label))
-        self._time_combo.setToolTip(_("Zobrazit pouze řádky z posledních X minut (0 = vše)."))
+        self._time_combo.setToolTip(_("Show only lines from the last X minutes (0 = all)."))
         self._time_combo.currentIndexChanged.connect(self._on_time_changed)
         tb.addWidget(self._time_combo)
 
         # Reverse order toggle — newest line at top (journalctl style)
         # vs default newest at bottom (tail -f style).
         self._btn_reverse = QAction(
-            _("Obrátit"), self, checkable=True, checked=self._settings.reverse_order
+            _("Reverse"), self, checkable=True, checked=self._settings.reverse_order
         )
         self._btn_reverse.setToolTip(
             "Při zapnutí: nejnovější řádky nahoře (journalctl styl).\n"
@@ -731,9 +734,7 @@ class LogDialog(QDialog):
         tb.addAction(self._btn_autoscroll)
 
         # Wrap toggle
-        self._btn_wrap = QAction(
-            _("Zalamovat"), self, checkable=True, checked=self._settings.word_wrap
-        )
+        self._btn_wrap = QAction(_("Wrap"), self, checkable=True, checked=self._settings.word_wrap)
         self._btn_wrap.toggled.connect(self._on_wrap_toggle)
         tb.addAction(self._btn_wrap)
 
@@ -762,25 +763,25 @@ class LogDialog(QDialog):
         tb.addSeparator()
 
         # Search
-        tb.addWidget(QLabel(_("Hledat: ")))
+        tb.addWidget(QLabel(_("Search: ")))
         self._search = QLineEdit()
         self._search.setPlaceholderText(_("Ctrl+F"))
         self._search.setMaximumWidth(220)
         self._search.returnPressed.connect(lambda: self._editor.find_text(self._search.text()))
         tb.addWidget(self._search)
 
-        btn_next = QPushButton(_("Najít"))
+        btn_next = QPushButton(_("Find"))
         btn_next.clicked.connect(lambda: self._editor.find_text(self._search.text()))
         tb.addWidget(btn_next)
 
         tb.addSeparator()
 
         # Copy / Clear / Refresh / Settings
-        tb.addAction(QAction(_("Kopírovat"), self, triggered=self._editor.copy))
-        clear = QAction(_("Vyčistit"), self, triggered=self._editor.clear)
+        tb.addAction(QAction(_("Copy"), self, triggered=self._editor.copy))
+        clear = QAction(_("Clear"), self, triggered=self._editor.clear)
         tb.addAction(clear)
-        tb.addAction(QAction(_("Obnovit"), self, triggered=self._refresh))
-        tb.addAction(QAction(_("Nastavení"), self, triggered=self._open_settings))
+        tb.addAction(QAction(_("Refresh"), self, triggered=self._refresh))
+        tb.addAction(QAction(_("Settings"), self, triggered=self._open_settings))
 
         self._toolbar = tb
 
@@ -913,8 +914,8 @@ class LogDialog(QDialog):
         line = cur.blockNumber() + 1
         col = cur.columnNumber() + 1
         self._status.setText(
-            f"  {_('Řádek')} {line}  {_('Sloupec')} {col}    "
-            f"{_('Viditelných')}: {total}    {_('ERR')}: {errors}    {_('WARN')}: {warnings}    "
+            f"  {_('Line')} {line}  {_('Column')} {col}    "
+            f"{_('Visible')}: {total}    {_('ERR')}: {errors}    {_('WARN')}: {warnings}    "
             f"{_('Auto-scroll')}: {'ZAP' if self._settings.auto_scroll else 'VYP'}"
         )
 
