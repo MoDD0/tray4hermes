@@ -4,27 +4,91 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Passive KDE/Plasma system-tray monitor and thin controller for
-**Hermes Gateway** — the messaging bridge that ships with
-[Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous
-Research.
+**A passivní KDE/Plasma system-tray monitor pro Hermes Gateway** — messaging
+bridge from [Hermes Agent](https://github.com/NousResearch/hermes-agent)
+by Nous Research.
 
-> **tray4hermes is read-only with respect to Hermes Agent.** It controls
-> the gateway via `systemctl --user`, persists one small JSON file of its
-> own, and reads everything else. It does not store tokens, does not
-> configure providers, does not edit `~/.hermes/config.yaml`. All of
-> that lives in Hermes Agent itself.
+> tray4hermes is **read-only with respect to Hermes Agent**. Controls the
+> gateway via `systemctl --user`, persists one small JSON file of its
+> own, reads everything else. Does not store tokens, does not configure
+> providers, does not edit `~/.hermes/config.yaml`. All of that lives
+> in Hermes Agent itself.
+
+---
+
+## Proč to vzniklo (a proč bys to mohl chtít taky)
+
+Hermes Agent je šikovný kus softwaru, ale jeho `hermes-gateway` běží
+jako **`systemd --user` service** — což znamená, že se ti defaultně
+spustí při loginu a zůstane běžet na pozadí, i když ho zrovna nepotřebuješ.
+Trochu jako Slack, Discord, nebo Telegram na Windows — ty běží taky
+furt, ale mají **iconku v systray**, aby ses mohl rozhodnout, jestli
+je chceš mít aktivní, nebo je na chvíli umrtvit.
+
+Hermes tohle (zatím) nemá. Přišlo mi to škoda, a tak vznikl
+**tray4hermes** — malý Python tray, který:
+
+- **ukazuje stav gateway** přímo v KDE liště (zelená/oranžová/červená),
+- **umožňuje Start / Stop / Restart** bez nutnosti otevírat terminál,
+- **přepíná profily** (`default`, `work`, `off`…) z menu,
+- **zobrazuje logy** v docela vyladěném vieweru (barevné levely,
+  filtry, hledání, traceback-aware, time-window),
+- a hlavně — **nesnaží se být chytřejší než samotný Hermes**. Jen
+  pozoruje, občas klikne, a mluví přes standardní `systemctl`.
+
+Pokud ti tedy vyhovuje filozofie "Hermes běží jen když chci, a já vidím
+co se děje" — tohle je pro tebe.
+
+> ⚠️ **Disclaimer:** tray4hermes is a *passive convenience addon*, not an
+> official Hermes Agent component. Hermes Agent can run perfectly well
+> without it. Use it if you like it; ignore it if you don't.
 
 ---
 
 ## Features
 
-- 📊 **Live status icon** in the system tray (green/orange/blue/grey/red)
-- ▶️ **Start / Stop / Restart** of `hermes-gateway.service`
-- 🔄 **Profile switcher** submenu (driven by `~/.hermes/profiles/`)
-- 📋 **Log viewer** with auto-refresh (tails `~/.hermes/logs/gateway.log`)
-- ⚙️ **Open Hermes config** in your default editor
-- 💻 **Launch Hermes CLI** in a new terminal
+- 📊 **Live status icon** v system trayi (🟢 active, 🟠 warming,
+   🔵 activating, ⚫ inactive, 🔴 failed, ⚪ unknown)
+- ▶️ **Start / Stop / Restart** of `hermes-gateway.service` z jednoho kliku
+- 🔄 **Profile switcher** submenu, driven by `~/.hermes/profiles/`
+- 📋 **Log viewer** — *see below*, je to docela vyladěné
+- ⚙️ **Open Hermes config** v default editoru
+- 💻 **Launch Hermes CLI** v novém terminálu
+
+### Log viewer
+
+`~/.hermes/logs/gateway.log` je často obrovský soubor plný tracebacků,
+který je potřeba *rychle* projít, ne číst od shora dolů. Proto viewer
+nabízí:
+
+- **Barevné log levely**: `DEBUG` šedá, `INFO` bílá, `WARNING` žlutá,
+  `ERROR` červená, `CRITICAL` červená + celořádkový highlight
+- **Line number gutter** jako Qt Creator/VS Code
+- **Filtry per level** (toggle na toolbaru) — vidíš jen to, co chceš
+- **TRACEBACK toggle** — zvláštní kategorie pro stack trace; můžeš je
+  vypnout a vidět jen zprávy, nebo naopak
+- **Time-window filter** (Vše / 5m / 15m / 1h / 6h / 24h) — vidíš
+  jen logy z poslední hodiny apod.
+- **Reverse order** (Obrátit) — přepne na `journalctl` styl
+  (nejnovější nahoře)
+- **Max řádků** spinbox — rolling buffer (0 = unlimited)
+- **Search** (`Ctrl+F` → `F3` next, `Shift+F3` prev, `Esc` close)
+- **Auto-scroll toggle** (default ON; OFF = zachová pozici při refresh)
+- **Word-wrap toggle**
+- **Copy / Clear / Refresh** akce
+- **Settings dialog** (font size, max lines, per-level visibility, …)
+- **Persisted** — všechna nastavení se ukládají do
+  `~/.config/tray4hermes/state.json`
+
+![Log viewer demo](docs/images/log_viewer.png)
+
+Screenshot výše ukazuje DEBUG řádek šedě a WARNING řádek žlutě (s
+`WARNING` tokenem zvýrazněným), s line numbers vlevo a status barem
+dole. Stejný dialog na tvém systému bude mít tvoje reálná log data
+– tento screenshot je ze sandboxového testu, kde se do fake
+gateway.log nasypaly dva ilustrační řádky.
+
+---
 
 ## Architecture
 
@@ -102,7 +166,7 @@ cp hermes-tray.desktop ~/.config/autostart/
 ### Development (editable)
 
 ```bash
-git clone https://forgejo.he1.co/HERMbuddy/tray4hermes.git
+git clone https://github.com/HERMbuddy/tray4hermes.git
 cd tray4hermes
 uv pip install --system -e ".[dev]"
 ./scripts/dev.sh   # installs deps + runs tests
@@ -221,3 +285,82 @@ tray4hermes/
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+## Contributing
+
+Issues, comments, návrhy — všechno vítáno. Ať už je to:
+
+- 🐛 **Bug report** — ideálně s výstupem z `~/.hermes/logs/gateway.log`
+  a `tray4hermes --debug` logu
+- 💡 **Feature request** — krátký popis, k čemu by to bylo. Nevadí mi
+  "wild" nápady (jiný backend, Wayland support, custom ikony…),
+  posoudíme
+- 🎨 **UI tweak** — barvy, layout, fonty, tooltips. Tohle je doména,
+  kde se nejvíc projeví vkus contributorů
+- 📖 **Documentation** — chybí tady mockupy screenshot log vieweru,
+  klidně přidejte
+- 🌍 **Localization** — momentálně UI je v češtině. Pokud by se to
+  hodilo v jiných jazycích, brzo dodám `_()` wrappers
+
+### Jak poslat PR / patch
+
+```bash
+git clone https://github.com/HERMbuddy/tray4hermes.git
+cd tray4hermes
+./scripts/dev.sh            # nainstaluje deps, spustí testy
+# proveďte změnu
+./scripts/dev.sh -v         # re-run testy s verbose
+uv run ruff check src tests
+uv run ruff format src tests
+git commit -m "popis"
+git push
+```
+
+Pravidla (pružná):
+
+1. **Nerozbij testy.** 56 testů musí zůstat zelených.
+2. **Nepřidávej nové runtime závislosti** bez diskuze — balíček má
+   jedinou závislost (`PyQt5`), a chceme to tak udržet.
+3. **Bez tajných dat** v diffu (`grep -rE "sk-[a-z0-9]{16,}|api_key.*[a-z0-9]{20,}"`).
+4. **Žádné úpravy `~/.hermes/*`** zevnitř tray — to je owned Hermes Agent.
+5. **MIT-compatible contributions.** Pokud přidáváš kód, drž se MIT.
+
+Pokud se ti líbí tenhle projekt a přemýšlíš o něčem, **klidně se ozvi**
+v issues — diskutujeme a najdeme společné řešení. I drobnost jako
+"tohle slovo se mi nelíbí v překladu" je vítaná.
+
+---
+
+## Roadmap (next-up ideas)
+
+Něco, co se mi honí hlavou, ale ještě není hotovo. Pokud tě něco z toho
+zajímá víc než zbytek, dej vědět:
+
+- **Wayland support** — momentálně jsem `xcb` (X11) jen kvůli
+  KDE Plasma tray API; Plasma 6 + Qt6 by otevřelo Wayland. PR vítán.
+- **Custom ikony per status** — SVG ikony místo `QPainter` raster
+- **Log search across sessions** (FTS5 přes sessions DB)
+- **Notifications on ERROR** — toast přes `D-Bus` když gateway
+  napíše traceback (líbí se mi to, ale je to otázka vkusu)
+- **Settings export/import** — sdílení presetů log vieweru mezi
+  profily
+
+---
+
+## Credits & thanks
+
+**Vyvinuto s využitím MiniMax M3** (`MiniMax-M3` přes `MiniMax OAuth`),
+jak hlavní model pro kód, tak pro revize. Většina kódu v této verzi
+vznikla v rámci testování AI-asistovaného vývoje — od diagnózy bugů
+přes refaktoring až po celý přepis `logs_view.py` z 59 řádků na 800+.
+Pokud M3 (nebo jeho budoucí iterace) udělá chybu v něčem co tady mám,
+je to moje chyba — finální review a commity jsou moje.
+
+Díky [@NousResearch](https://github.com/NousResearch) za Hermes Agent
+a obecně za celý ekosystém open-source AI agentů.
+
+A díky kterémukoli contributorovi, který se tu objeví — ať už s PR,
+nebo jenom s issue. Tohle je malý projekt, ale malé projekty mají
+tendenci žít déle než velké. 😉
