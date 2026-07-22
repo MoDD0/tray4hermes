@@ -83,6 +83,11 @@ where = ["src"]
 "tray4hermes" = [
   "py.typed",
   "data/*.desktop",
+  # Compiled gettext catalogues (.mo). Lives next to the source
+  # package so wheel installation carries the translations.
+  # Translated .po sources ship separately under `locales/`
+  # at the repo root for translator convenience.
+  "_locales/*/LC_MESSAGES/*.mo",
 ] # Autostart .desktop file ships inside the installed wheel;
 # users copy it to ~/.config/autostart/ themselves
 # (see README → "Install autostart on KDE" snippet).

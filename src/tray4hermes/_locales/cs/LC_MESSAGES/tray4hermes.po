@@ -1,0 +1,214 @@
+# Czech translations for tray4hermes UI strings.
+# (Czech isn't actually a translation here — Czech IS the source
+# language used during development, so the .mo file simply echoes
+# the source. The compiled Czech translation is intentionally
+# byte-identical to the source strings because every msgstr is
+# already in Czech. But shipping a .mo for Czech means the
+# runtime can still pick a Czech translation, validate the
+# extraction pipeline, and honour ``--language cs`` even when the
+# locale is something else. It also makes the build reproducible
+# for future translators who want to fork off cs.po into de.po /
+# sk.po / etc.)
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=((n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2);\n"
+
+msgid "Kontroluji…"
+msgstr "Kontroluji…"
+
+msgid "Model: ?"
+msgstr "Model: ?"
+
+msgid "Profil"
+msgstr "Profil"
+
+msgid "▶  Start"
+msgstr "▶  Start"
+
+msgid "⏹  Stop"
+msgstr "⏹  Stop"
+
+msgid "🔄 Restart"
+msgstr "🔄 Restart"
+
+msgid "📋 Logy"
+msgstr "📋 Logy"
+
+msgid "⚙  Hermes config"
+msgstr "⚙  Hermes config"
+
+msgid "💻  Hermes CLI"
+msgstr "💻  Hermes CLI"
+
+msgid "ℹ  O tray4hermes"
+msgstr "ℹ  O tray4hermes"
+
+msgid "✖  Ukončit tray"
+msgstr "✖  Ukončit tray"
+
+msgid "Změnit profil?"
+msgstr "Změnit profil?"
+
+msgid ""
+"Restartovat gateway s profilem '{name}'?\n\n"
+"Aktuální session v Discordu/Hermes Desktopu se může krátce odpojit."
+msgstr ""
+"Restartovat gateway s profilem '{name}'?\n\n"
+"Aktuální session v Discordu/Hermes Desktopu se může krátce odpojit."
+
+msgid "Chyba"
+msgstr "Chyba"
+
+msgid ""
+"Nelze nastavit profil '{name}':\n\n"
+"{out_msg}\n\n"
+"Profil musí existovat v {profiles_dir}/."
+msgstr ""
+"Nelze nastavit profil '{name}':\n\n"
+"{out_msg}\n\n"
+"Profil musí existovat v {profiles_dir}/."
+
+msgid "(bez výstupu)"
+msgstr "(bez výstupu)"
+
+msgid "Config nenalezen:\n{config}"
+msgstr "Config nenalezen:\n{config}"
+
+msgid ""
+"<b>tray4hermes v{version}</b><br><br>"
+"Pasivní observer pro Hermes Gateway.<br><br>"
+"<b>Čte:</b> ~/.hermes/{{gateway_state.json, profiles/, config.yaml, "
+"logs/gateway.log}}<br>"
+"<b>Píše:</b> ~/.config/tray4hermes/state.json<br>"
+"<b>Ovládá:</b> systemctl --user ({service})<br><br>"
+"Hermes Agent: github.com/NousResearch/hermes-agent"
+msgstr ""
+"<b>tray4hermes v{version}</b><br><br>"
+"Pasivní observer pro Hermes Gateway.<br><br>"
+"<b>Čte:</b> ~/.hermes/{{gateway_state.json, profiles/, config.yaml, "
+"logs/gateway.log}}<br>"
+"<b>Píše:</b> ~/.config/tray4hermes/state.json<br>"
+"<b>Ovládá:</b> systemctl --user ({service})<br><br>"
+"Hermes Agent: github.com/NousResearch/hermes-agent"
+
+msgid "Log viewer — nastavení"
+msgstr "Log viewer — nastavení"
+
+msgid "Maximální počet řádků v bufferu:"
+msgstr "Maximální počet řádků v bufferu:"
+
+msgid "Velikost písma:"
+msgstr "Velikost písma:"
+
+msgid "Auto-scroll na nové řádky"
+msgstr "Auto-scroll na nové řádky"
+
+msgid "Zalamovat dlouhé řádky"
+msgstr "Zalamovat dlouhé řádky"
+
+msgid "Zobrazované úrovně:"
+msgstr "Zobrazované úrovně:"
+
+msgid "Max řádků: "
+msgstr "Max řádků: "
+
+msgid ""
+"Maximální počet řádků v bufferu (0 = bez limitu).\n"
+"Starší řádky jsou průběžně odstraňovány."
+msgstr ""
+"Maximální počet řádků v bufferu (0 = bez limitu).\n"
+"Starší řádky jsou průběžně odstraňovány."
+
+msgid "Čas: "
+msgstr "Čas: "
+
+msgid "Zobrazit pouze řádky z posledních X minut (0 = vše)."
+msgstr "Zobrazit pouze řádky z posledních X minut (0 = vše)."
+
+msgid "Obrátit"
+msgstr "Obrátit"
+
+msgid ""
+"Při zapnutí: nejnovější řádky nahoře (journalctl styl).\n"
+"Při vypnutí: nejnovější dole (tail -f styl)."
+msgstr ""
+"Při zapnutí: nejnovější řádky nahoře (journalctl styl).\n"
+"Při vypnutí: nejnovější dole (tail -f styl)."
+
+msgid "Auto-scroll"
+msgstr "Auto-scroll"
+
+msgid "Zalamovat"
+msgstr "Zalamovat"
+
+msgid "Filtr: "
+msgstr "Filtr: "
+
+msgid "Hledat: "
+msgstr "Hledat: "
+
+msgid "Ctrl+F"
+msgstr "Ctrl+F"
+
+msgid "Najít"
+msgstr "Najít"
+
+msgid "Kopírovat"
+msgstr "Kopírovat"
+
+msgid "Vyčistit"
+msgstr "Vyčistit"
+
+msgid "Obnovit"
+msgstr "Obnovit"
+
+msgid "Nastavení"
+msgstr "Nastavení"
+
+msgid "Hermes Gateway — logy (tray4hermes v{version})"
+msgstr "Hermes Gateway — logy (tray4hermes v{version})"
+
+msgid "Find"
+msgstr "Find"
+
+msgid "Find next"
+msgstr "Find next"
+
+msgid "Find prev"
+msgstr "Find prev"
+
+msgid "Escape"
+msgstr "Escape"
+
+msgid "Řádek"
+msgstr "Řádek"
+
+msgid "Sloupec"
+msgstr "Sloupec"
+
+msgid "Viditelných"
+msgstr "Viditelných"
+
+msgid "ERR"
+msgstr "ERR"
+
+msgid "WARN"
+msgstr "WARN"
+
+msgid "ZAP"
+msgstr "ZAP"
+
+msgid "VYP"
+msgstr "VYP"
+
+msgid ""
+"tray4hermes is already running.\n"
+"Find it in the system tray."
+msgstr ""
+"tray4hermes is already running.\n"
+"Find it in the system tray."
+
+msgid "all"
+msgstr "Vše"

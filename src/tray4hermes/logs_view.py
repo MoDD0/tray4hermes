@@ -50,6 +50,18 @@ from PyQt5.QtWidgets import (
 from tray4hermes import __version__
 from tray4hermes import paths as _paths
 
+# After `i18n.install(...)` runs (in __main__), `tray4hermes.i18n._`
+# is bound to the active translation. Until that happens — for
+# example when a test imports this module without going through
+# `__main__` — `_` falls back to a NullTranslations().gettext that
+# returns the source string verbatim.
+try:
+    from tray4hermes.i18n import _ as _  # noqa: PLC0415
+except ImportError:
+
+    def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
+        return s
+
 # A separate dataclass for log-viewer-only settings. Kept separate from
 # TrayState so changing "max log lines" doesn't touch the user's
 # selected_profile persistence.
@@ -402,12 +414,12 @@ class LogSettingsDialog(QDialog):
 
     def __init__(self, current: LogSettings, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Log viewer — nastavení")
+        self.setWindowTitle(_("Log viewer — nastavení"))
         layout = QVBoxLayout(self)
 
         # max lines
         row = QHBoxLayout()
-        row.addWidget(QLabel("Maximální počet řádků v bufferu:"))
+        row.addWidget(QLabel(_("Maximální počet řádků v bufferu:")))
         self._max_lines = QSpinBox()
         self._max_lines.setRange(100, 100_000)
         self._max_lines.setSingleStep(500)
@@ -417,7 +429,7 @@ class LogSettingsDialog(QDialog):
 
         # font size
         row = QHBoxLayout()
-        row.addWidget(QLabel("Velikost písma:"))
+        row.addWidget(QLabel(_("Velikost písma:")))
         self._font_size = QSpinBox()
         self._font_size.setRange(6, 24)
         self._font_size.setValue(current.font_size)
@@ -425,17 +437,17 @@ class LogSettingsDialog(QDialog):
         layout.addLayout(row)
 
         # auto_scroll
-        self._auto_scroll = QCheckBox("Auto-scroll na nové řádky")
+        self._auto_scroll = QCheckBox(_("Auto-scroll na nové řádky"))
         self._auto_scroll.setChecked(current.auto_scroll)
         layout.addWidget(self._auto_scroll)
 
         # word wrap
-        self._word_wrap = QCheckBox("Zalamovat dlouhé řádky")
+        self._word_wrap = QCheckBox(_("Zalamovat dlouhé řádky"))
         self._word_wrap.setChecked(current.word_wrap)
         layout.addWidget(self._word_wrap)
 
         # show levels
-        layout.addWidget(QLabel("Zobrazované úrovně:"))
+        layout.addWidget(QLabel(_("Zobrazované úrovně:")))
         self._level_checks: dict[str, QCheckBox] = {}
         for level in ("ERROR", "WARNING", "INFO", "DEBUG", "TRACE"):
             cb = QCheckBox(level)
@@ -468,7 +480,9 @@ class LogDialog(QDialog):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(f"Hermes Gateway — logy (tray4hermes v{__version__})")
+        self.setWindowTitle(
+            _("Hermes Gateway — logy (tray4hermes v{version})").format(version=__version__)
+        )
         self.resize(900, 500)
 
         self._settings = _load_log_settings()
@@ -498,20 +512,20 @@ class LogDialog(QDialog):
         self._tb_checkbox.stateChanged.connect(self._on_traceback_toggle)
 
         # Keyboard shortcuts
-        QAction("Find", self, shortcut="Ctrl+F", triggered=self._focus_search)
+        QAction(_("Find"), self, shortcut="Ctrl+F", triggered=self._focus_search)
         QAction(
-            "Find next",
+            _("Find next"),
             self,
             shortcut="F3",
             triggered=lambda: self._editor.find_text(self._search.text()),
         )
         QAction(
-            "Find prev",
+            _("Find prev"),
             self,
             shortcut="Shift+F3",
             triggered=lambda: self._editor.find_text(self._search.text(), backward=True),
         )
-        QAction("Escape", self, shortcut="Esc", triggered=self._close_search)
+        QAction(_("Escape"), self, shortcut="Esc", triggered=self._close_search)
 
     # ── UI construction ───────────────────────────────────────────────────
     def _build_toolbar(self) -> None:
@@ -520,7 +534,7 @@ class LogDialog(QDialog):
         tb.setIconSize(QSize(16, 16))
 
         # Buffer-size spinner — how many tail lines to keep. 0 = no limit.
-        tb.addWidget(QLabel("Max řádků: "))
+        tb.addWidget(QLabel(_("Max řádků: ")))
         self._max_lines_spin = QSpinBox()
         self._max_lines_spin.setRange(0, 100_000)
         self._max_lines_spin.setSingleStep(500)
@@ -534,26 +548,32 @@ class LogDialog(QDialog):
 
         # Time-range filter — only show lines newer than this many minutes.
         tb.addSeparator()
-        tb.addWidget(QLabel("Čas: "))
+        tb.addWidget(QLabel(_("Čas: ")))
         self._time_combo = QComboBox()
-        self._time_combo.addItems(["Vše", "5m", "15m", "1h", "6h", "24h"])
-        # Map label → minutes; 0 means "no time filter"
-        self._time_choices = {"Vše": 0, "5m": 5, "15m": 15, "1h": 60, "6h": 360, "24h": 1440}
+        # We label the combo boxes by their translated text but
+        # match user-visible choice back to a stable internal key
+        # (`self._time_choices`). Without the dual mapping, every
+        # translated string would have to match an English key in
+        # the dict; this is fragile across locales.
+        self._time_keys = ["all", "5m", "15m", "1h", "6h", "24h"]
+        self._time_combo.addItems([_(k) if k == "all" else k for k in self._time_keys])
+        # Map stable internal key → minutes. 0 = no filter.
+        self._time_choices = {"all": 0, "5m": 5, "15m": 15, "1h": 60, "6h": 360, "24h": 1440}
         # Pre-select based on settings
-        current_label = "Vše"
-        for label, mins in self._time_choices.items():
-            if mins == self._settings.time_window_minutes:
-                current_label = label
+        current_label = "all"
+        for internal_key in self._time_keys:
+            if self._time_choices[internal_key] == self._settings.time_window_minutes:
+                current_label = internal_key
                 break
-        self._time_combo.setCurrentText(current_label)
-        self._time_combo.setToolTip("Zobrazit pouze řádky z posledních X minut (0 = vše).")
-        self._time_combo.currentTextChanged.connect(self._on_time_changed)
+        self._time_combo.setCurrentIndex(self._time_keys.index(current_label))
+        self._time_combo.setToolTip(_("Zobrazit pouze řádky z posledních X minut (0 = vše)."))
+        self._time_combo.currentIndexChanged.connect(self._on_time_changed)
         tb.addWidget(self._time_combo)
 
         # Reverse order toggle — newest line at top (journalctl style)
         # vs default newest at bottom (tail -f style).
         self._btn_reverse = QAction(
-            "Obrátit", self, checkable=True, checked=self._settings.reverse_order
+            _("Obrátit"), self, checkable=True, checked=self._settings.reverse_order
         )
         self._btn_reverse.setToolTip(
             "Při zapnutí: nejnovější řádky nahoře (journalctl styl).\n"
@@ -566,14 +586,14 @@ class LogDialog(QDialog):
 
         # Auto-scroll toggle
         self._btn_autoscroll = QAction(
-            "Auto-scroll", self, checkable=True, checked=self._settings.auto_scroll
+            _("Auto-scroll"), self, checkable=True, checked=self._settings.auto_scroll
         )
         self._btn_autoscroll.toggled.connect(self._on_autoscroll_toggle)
         tb.addAction(self._btn_autoscroll)
 
         # Wrap toggle
         self._btn_wrap = QAction(
-            "Zalamovat", self, checkable=True, checked=self._settings.word_wrap
+            _("Zalamovat"), self, checkable=True, checked=self._settings.word_wrap
         )
         self._btn_wrap.toggled.connect(self._on_wrap_toggle)
         tb.addAction(self._btn_wrap)
@@ -603,25 +623,25 @@ class LogDialog(QDialog):
         tb.addSeparator()
 
         # Search
-        tb.addWidget(QLabel("Hledat: "))
+        tb.addWidget(QLabel(_("Hledat: ")))
         self._search = QLineEdit()
-        self._search.setPlaceholderText("Ctrl+F")
+        self._search.setPlaceholderText(_("Ctrl+F"))
         self._search.setMaximumWidth(220)
         self._search.returnPressed.connect(lambda: self._editor.find_text(self._search.text()))
         tb.addWidget(self._search)
 
-        btn_next = QPushButton("Najít")
+        btn_next = QPushButton(_("Najít"))
         btn_next.clicked.connect(lambda: self._editor.find_text(self._search.text()))
         tb.addWidget(btn_next)
 
         tb.addSeparator()
 
         # Copy / Clear / Refresh / Settings
-        tb.addAction(QAction("Kopírovat", self, triggered=self._editor.copy))
-        clear = QAction("Vyčistit", self, triggered=self._editor.clear)
+        tb.addAction(QAction(_("Kopírovat"), self, triggered=self._editor.copy))
+        clear = QAction(_("Vyčistit"), self, triggered=self._editor.clear)
         tb.addAction(clear)
-        tb.addAction(QAction("Obnovit", self, triggered=self._refresh))
-        tb.addAction(QAction("Nastavení", self, triggered=self._open_settings))
+        tb.addAction(QAction(_("Obnovit"), self, triggered=self._refresh))
+        tb.addAction(QAction(_("Nastavení"), self, triggered=self._open_settings))
 
         self._toolbar = tb
 
@@ -754,9 +774,9 @@ class LogDialog(QDialog):
         line = cur.blockNumber() + 1
         col = cur.columnNumber() + 1
         self._status.setText(
-            f"  Řádek {line}  Sloupec {col}    "
-            f"Viditelných: {total}    ERR: {errors}    WARN: {warnings}    "
-            f"Auto-scroll: {'ZAP' if self._settings.auto_scroll else 'VYP'}"
+            f"  {_('Řádek')} {line}  {_('Sloupec')} {col}    "
+            f"{_('Viditelných')}: {total}    {_('ERR')}: {errors}    {_('WARN')}: {warnings}    "
+            f"{_('Auto-scroll')}: {'ZAP' if self._settings.auto_scroll else 'VYP'}"
         )
 
     # ── Event handlers ────────────────────────────────────────────────────
@@ -790,8 +810,16 @@ class LogDialog(QDialog):
     def _on_traceback_toggle(self, checked: bool) -> None:
         self._update_with(show_tracebacks=checked)
 
-    def _on_time_changed(self, label: str) -> None:
-        minutes = self._time_choices.get(label, 0)
+    def _on_time_changed(self, index: int) -> None:
+        # ``index`` is the combo box position, which maps to a
+        # stable internal key in ``self._time_keys``. We deliberately
+        # don't bind to the translated label — that's user-visible
+        # text and shouldn't drive persistence.
+        if 0 <= index < len(self._time_keys):
+            internal_key = self._time_keys[index]
+        else:
+            internal_key = "all"
+        minutes = self._time_choices.get(internal_key, 0)
         self._update_with(time_window_minutes=minutes)
 
     def _on_reverse_toggle(self, checked: bool) -> None:

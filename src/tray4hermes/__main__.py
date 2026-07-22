@@ -1,8 +1,14 @@
 """`python -m tray4hermes` entry point.
 
-Supports `--help` and `--version` flags without spinning up a
-QApplication. All other paths acquire the single-instance lock and
-run the tray.
+Supports `--help`, `--version`, and `--language` flags. The
+language flag accepts an ISO 639-1 code (e.g. ``cs``, ``en``,
+``de``); when set, the runtime UI strings are translated into
+that language if a translation exists. When omitted, the
+selection follows the OS environment (``LC_ALL`` / ``LC_MESSAGES``
+/ ``LANG``) with ``en`` (canonical) and ``cs`` (the first
+translation we shipped) as the fallback chain.
+
+Other paths acquire the single-instance lock and run the tray.
 """
 
 from __future__ import annotations
@@ -13,9 +19,26 @@ import sys
 from tray4hermes import __version__
 from tray4hermes import paths as _paths
 
+# ``install`` is the runtime binding step for gettext; importing
+# the symbol at module-load ensures we fail loudly if i18n
+# machinery is missing, rather than later at the first ``_()``
+# call. ``available_languages`` lets ``--language`` (with no
+# argument) report what's shipped.
+from tray4hermes.i18n import available_languages
+from tray4hermes.i18n import install as _i18n_install
+
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
-    """Keep argparse deliberately small — flags are documented in README."""
+    """Keep argparse deliberately small — flags are documented in README.
+
+    Recognised flags:
+
+    - ``--version``: print version and exit.
+    - ``--help``:    print usage and exit.
+    - ``--language`` / ``-L``: ISO 639-1 short code. ``--language cs``
+      forces Czech. ``--language none`` (or ``--language`` with no
+      value) reads from the OS environment.
+    """
     parser = argparse.ArgumentParser(
         prog="tray4hermes",
         description=(
@@ -32,13 +55,48 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         action="version",
         version=f"%(prog)s {__version__}",
     )
+    parser.add_argument(
+        "-L",
+        "--language",
+        default=None,
+        metavar="CODE",
+        help=(
+            "Force a UI language (ISO 639-1 code, e.g. 'cs', 'en'). "
+            "Default is to honour the OS locale (LANG / LC_ALL / LC_MESSAGES) "
+            "with English / Czech as fallback. Pass --language without an "
+            "argument to query which languages have been built into the wheel."
+        ),
+    )
     return parser.parse_args(argv)
 
 
 def main() -> int:
-    """Acquire single-instance lock, run the tray, release on exit."""
+    """Acquire single-instance lock, run the tray, release on exit.
+
+    Step 1: parse argv BEFORE binding gettext, so argparse's
+    --help / --version text can still be read in source lang.
+
+    Step 2: bind the UI translation. We do this only after we
+    know which language to install (CLI flag or env), so Qt
+    widgets constructed later pick up the right strings.
+    """
     args = _parse_args(sys.argv[1:])
-    del args  # placeholder for future flags; nothing to act on today
+    language_arg: str | None = args.language
+
+    # The ``--language`` flag with no argument is a short-circuit
+    # to list available languages and exit; convenient for the
+    # README snippet "what languages does this build support?"
+    if "--language" in sys.argv[1:] and (
+        "--language" == sys.argv[-1] or sys.argv[-2:] == ["--language", ""]
+    ):
+        print(
+            "Available languages:",
+            ", ".join(available_languages()) or "(none — no compiled .mo files found)",
+        )
+        return 0
+
+    # Bind gettext with the requested language (or env fallback).
+    _i18n_install(language=language_arg)
 
     from tray4hermes.lock import acquire, release
 
@@ -50,6 +108,9 @@ def main() -> int:
         QMessageBox.information(
             None,
             "Hermes Tray",
+            # TRANSLATORS: body of a dialog shown when another instance
+            # of the tray is already running (we hold a single-instance
+            # lock and refuse to start a second).
             "tray4hermes is already running.\nFind it in the system tray.",
         )
         return 2

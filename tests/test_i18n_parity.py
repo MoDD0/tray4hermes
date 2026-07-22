@@ -133,8 +133,7 @@ def test_i18n_lint_passes(repo_root: Path) -> None:
     """The parity lint must pass for the current translation set."""
     result = _run_script(repo_root, "i18n_lint.py")
     assert result.returncode == 0, (
-        f"i18n_lint.py reported parity errors:\n"
-        f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+        f"i18n_lint.py reported parity errors:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
     )
 
 
@@ -159,9 +158,7 @@ def test_compiled_readmes_match_sources(repo_root: Path) -> None:
 
     # Locales resolved must include 'en' (canonical).
     codes = [loc.code for loc in locales]
-    assert "en" in codes, (
-        f"canonical 'en' locale not registered. Locales: {codes}"
-    )
+    assert "en" in codes, f"canonical 'en' locale not registered. Locales: {codes}"
 
     # Every registered locale must point at a real file and a real
     # writable target.

@@ -1,0 +1,252 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2026 MoDDO
+# This file is distributed under the same license as the tray4hermes package.
+#
+# Source-of-truth strings live in src/tray4hermes/*.py and are wrapped in
+# gettext calls (_("...")). Run scripts/extract_messages.py to refresh this
+# template from the source code; translators normally edit .po files derived
+# from it. DO NOT add translations here — only msgid entries (English source
+# strings) — translations belong in <lang>.po files.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/tray4hermes/app.py:105
+msgid "Kontroluji…"
+msgstr ""
+
+#: src/tray4hermes/app.py:109
+msgid "Model: ?"
+msgstr ""
+
+#: src/tray4hermes/app.py:117
+msgid "Profil"
+msgstr ""
+
+#: src/tray4hermes/app.py:122
+msgid "▶  Start"
+msgstr ""
+
+#: src/tray4hermes/app.py:126
+msgid "⏹  Stop"
+msgstr ""
+
+#: src/tray4hermes/app.py:130
+msgid "🔄 Restart"
+msgstr ""
+
+#: src/tray4hermes/app.py:136
+msgid "📋 Logy"
+msgstr ""
+
+#: src/tray4hermes/app.py:140
+msgid "⚙  Hermes config"
+msgstr ""
+
+#: src/tray4hermes/app.py:144
+msgid "💻  Hermes CLI"
+msgstr ""
+
+#: src/tray4hermes/app.py:150
+msgid "ℹ  O tray4hermes"
+msgstr ""
+
+#: src/tray4hermes/app.py:154
+msgid "✖  Ukončit tray"
+msgstr ""
+
+#: src/tray4hermes/app.py:182
+msgid "Změnit profil?"
+msgstr ""
+
+#: src/tray4hermes/app.py:183
+msgid ""
+"Restartovat gateway s profilem '{name}'?\n\n"
+"Aktuální session v Discordu/Hermes Desktopu se může krátce odpojit."
+msgstr ""
+
+#: src/tray4hermes/app.py:195
+msgid "Chyba"
+msgstr ""
+
+#: src/tray4hermes/app.py:196
+msgid ""
+"Nelze nastavit profil '{name}':\n\n"
+"{out_msg}\n\n"
+"Profil musí existovat v {profiles_dir}/."
+msgstr ""
+
+#: src/tray4hermes/app.py:196
+msgid "(bez výstupu)"
+msgstr ""
+
+#: src/tray4hermes/app.py:228
+msgid "Config nenalezen:\n{config}"
+msgstr ""
+
+#: src/tray4hermes/app.py:247
+msgid ""
+"<b>tray4hermes v{version}</b><br><br>"
+"Pasivní observer pro Hermes Gateway.<br><br>"
+"<b>Čte:</b> ~/.hermes/{{gateway_state.json, profiles/, config.yaml, "
+"logs/gateway.log}}<br>"
+"<b>Píše:</b> ~/.config/tray4hermes/state.json<br>"
+"<b>Ovládá:</b> systemctl --user ({service})<br><br>"
+"Hermes Agent: github.com/NousResearch/hermes-agent"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:406
+msgid "Log viewer — nastavení"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:411
+msgid "Maximální počet řádků v bufferu:"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:421
+msgid "Velikost písma:"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:429
+msgid "Auto-scroll na nové řádky"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:434
+msgid "Zalamovat dlouhé řádky"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:439
+msgid "Zobrazované úrovně:"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:524
+msgid "Max řádků: "
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:531
+msgid ""
+"Maximální počet řádků v bufferu (0 = bez limitu).\n"
+"Starší řádky jsou průběžně odstraňovány."
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:541
+msgid "Čas: "
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:556
+msgid "Zobrazit pouze řádky z posledních X minut (0 = vše)."
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:563
+msgid "Obrátit"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:564
+msgid ""
+"Při zapnutí: nejnovější řádky nahoře (journalctl styl).\n"
+"Při vypnutí: nejnovější dole (tail -f styl)."
+msgstr ""
+
+#: src/tray4hermes/app.py — flow descriptors (state.label)
+#: src/tray4hermes/app.py:570
+msgid "Auto-scroll"
+msgstr ""
+
+#: src/tray4hermes/app.py:577
+msgid "Zalamovat"
+msgstr ""
+
+#: src/tray4hermes/app.py:585
+msgid "Filtr: "
+msgstr ""
+
+#: src/tray4hermes/app.py:613
+msgid "Hledat: "
+msgstr ""
+
+#: src/tray4hermes/app.py:615
+msgid "Ctrl+F"
+msgstr ""
+
+#: src/tray4hermes/app.py:619
+msgid "Najít"
+msgstr ""
+
+#: src/tray4hermes/app.py:621
+msgid "Kopírovat"
+msgstr ""
+
+#: src/tray4hermes/app.py:622
+msgid "Vyčistit"
+msgstr ""
+
+#: src/tray4hermes/app.py:624
+msgid "Obnovit"
+msgstr ""
+
+#: src/tray4hermes/app.py:625
+msgid "Nastavení"
+msgstr ""
+
+#: src/tray4hermes/app.py:472
+msgid "Hermes Gateway — logy (tray4hermes v{version})"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:502
+msgid "Find"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:503
+msgid "Find next"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:509
+msgid "Find prev"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:515
+msgid "Escape"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:764
+msgid "Řádek"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:765
+msgid "Sloupec"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:766
+msgid "Viditelných"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:766
+msgid "ERR"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:766
+msgid "WARN"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:766
+msgid "ZAP"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:766
+msgid "VYP"
+msgstr ""
+
+#: src/tray4hermes/__main__.py:54
+msgid ""
+"tray4hermes is already running.\n"
+"Find it in the system tray."
+msgstr ""
+
+# Time-window combo — internal key "all" maps to the displayed
+# "All" label. Translations should provide the local equivalent of
+# "All" (or whatever is appropriate for "no filter").
+#: src/tray4hermes/logs_view.py:540
+msgid "all"
+msgstr ""
