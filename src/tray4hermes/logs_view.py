@@ -84,6 +84,10 @@ class LogSettings:
     show_tracebacks: bool = True
     time_window_minutes: int = 0  # 0 = show everything
     reverse_order: bool = False  # False = newest at bottom (tail -f style)
+    # UI language. ``None`` = follow OS locale (LANG/LC_ALL/LC_MESSAGES).
+    # ``"cs"``, ``"en"``, etc. = force that language. The value is
+    # persisted so the user's choice survives a restart.
+    language: str | None = None
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -95,11 +99,15 @@ class LogSettings:
             "show_tracebacks": self.show_tracebacks,
             "time_window_minutes": self.time_window_minutes,
             "reverse_order": self.reverse_order,
+            "language": self.language,
         }
 
     @classmethod
     def from_json(cls, data: dict[str, object]) -> LogSettings:
         levels = data.get("show_levels", ("ERROR", "WARNING", "INFO", "DEBUG", "TRACE"))
+        raw_lang = data.get("language", None)
+        # Normalise: empty string → None (treat as "follow OS locale").
+        language = str(raw_lang) if raw_lang else None
         return cls(
             max_lines=int(data.get("max_lines", 2000)),
             auto_scroll=bool(data.get("auto_scroll", True)),
@@ -111,6 +119,7 @@ class LogSettings:
             show_tracebacks=bool(data.get("show_tracebacks", True)),
             time_window_minutes=int(data.get("time_window_minutes", 0)),
             reverse_order=bool(data.get("reverse_order", False)),
+            language=language,
         )
 
     @classmethod
@@ -410,20 +419,38 @@ class LogTextEdit(QPlainTextEdit):
 
 # ── Settings dialog ────────────────────────────────────────────────────────
 class LogSettingsDialog(QDialog):
-    """Modal dialog for editing LogSettings."""
+    """Modal dialog for editing all LogSettings.
+
+    This is the 'one-stop settings' panel — every preference the log
+    viewer supports is editable here, with sensible defaults shown
+    as the initial state. The toolbar in LogDialog exposes quick-
+    toggle shortcuts for the most-common controls, but this dialog
+    is where the user lands when they click 'Nastavení' to see and
+    change everything at once.
+    """
 
     def __init__(self, current: LogSettings, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle(_("Log viewer — nastavení"))
+        self.resize(420, 560)
         layout = QVBoxLayout(self)
+
+        # ── Buffer & display ───────────────────────────────────────────
+        layout.addWidget(self._section_label(_("Zobrazení")))
 
         # max lines
         row = QHBoxLayout()
         row.addWidget(QLabel(_("Maximální počet řádků v bufferu:")))
         self._max_lines = QSpinBox()
-        self._max_lines.setRange(100, 100_000)
+        self._max_lines.setRange(0, 100_000)
         self._max_lines.setSingleStep(500)
         self._max_lines.setValue(current.max_lines)
+        self._max_lines.setToolTip(
+            _(
+                "0 = bez limitu (všechny řádky). "
+                "Při vyšších hodnotách se starší řádky postupně odstraňují."
+            )
+        )
         row.addWidget(self._max_lines)
         layout.addLayout(row)
 
@@ -436,39 +463,151 @@ class LogSettingsDialog(QDialog):
         row.addWidget(self._font_size)
         layout.addLayout(row)
 
-        # auto_scroll
+        # time window
+        row = QHBoxLayout()
+        row.addWidget(QLabel(_("Časové okno:")))
+        self._time_window = QComboBox()
+        # Internal keys → minutes; stable across translations.
+        self._tw_keys = ["all", "5m", "15m", "1h", "6h", "24h"]
+        self._tw_map = {"all": 0, "5m": 5, "15m": 15, "1h": 60, "6h": 360, "24h": 1440}
+        self._time_window.addItems([_("Vše") if k == "all" else k for k in self._tw_keys])
+        # Select current
+        idx = 0
+        for i, k in enumerate(self._tw_keys):
+            if self._tw_map[k] == current.time_window_minutes:
+                idx = i
+                break
+        self._time_window.setCurrentIndex(idx)
+        row.addWidget(self._time_window)
+        layout.addLayout(row)
+
+        # ── Behaviour toggles ──────────────────────────────────────────
+        layout.addWidget(self._section_label(_("Chování")))
+
         self._auto_scroll = QCheckBox(_("Auto-scroll na nové řádky"))
         self._auto_scroll.setChecked(current.auto_scroll)
+        self._auto_scroll.setToolTip(
+            _(
+                "Při zapnutí zůstává editor na posledním řádku při obnově. "
+                "Při vypnutí zachová pozici kurzoru."
+            )
+        )
         layout.addWidget(self._auto_scroll)
 
-        # word wrap
         self._word_wrap = QCheckBox(_("Zalamovat dlouhé řádky"))
         self._word_wrap.setChecked(current.word_wrap)
         layout.addWidget(self._word_wrap)
 
-        # show levels
+        self._reverse = QCheckBox(_("Obrátit pořadí (nejnovější nahoře)"))
+        self._reverse.setChecked(current.reverse_order)
+        self._reverse.setToolTip(
+            _(
+                "Journalctl styl — nejnovější řádky nahoře, nejstarší dole. "
+                "Výchozí: nejnovější dole (tail -f styl)."
+            )
+        )
+        layout.addWidget(self._reverse)
+
+        self._show_tracebacks = QCheckBox(_("Zobrazit tracebacky (stack traces)"))
+        self._show_tracebacks.setChecked(current.show_tracebacks)
+        self._show_tracebacks.setToolTip(
+            _(
+                "Zvláštní kategorie pro stack trace řádky. "
+                "Můžeš je skrýt a vidět jen zprávy, nebo nechat zobrazené."
+            )
+        )
+        layout.addWidget(self._show_tracebacks)
+
+        # ── Level filters ──────────────────────────────────────────────
+        layout.addWidget(self._section_label(_("Filtrování úrovní")))
         layout.addWidget(QLabel(_("Zobrazované úrovně:")))
         self._level_checks: dict[str, QCheckBox] = {}
         for level in ("ERROR", "WARNING", "INFO", "DEBUG", "TRACE"):
             cb = QCheckBox(level)
             cb.setChecked(level in current.show_levels)
+            cb.setStyleSheet(f"QCheckBox {{ color: {LEVEL_COLORS[level].name()}; }}")
             self._level_checks[level] = cb
             layout.addWidget(cb)
 
-        # OK/Cancel
+        # ── Language ──────────────────────────────────────────────────
+        layout.addWidget(self._section_label(_("Jazyk")))
+        row = QHBoxLayout()
+        row.addWidget(QLabel(_("Jazyk rozhraní:")))
+        self._language = QComboBox()
+        # The first entry is always "System (follow locale)"; the rest
+        # are populated from i18n.available_languages().
+        self._lang_keys: list[str | None] = [None]
+        self._language.addItem(_("Systémový (dle locale)"))
+        # Always offer English explicitly — it's the canonical source
+        # language, so even without a compiled .mo the user should
+        # be able to pick it (it means "no translation, source strings").
+        self._lang_keys.append("en")
+        self._language.addItem("English")
+        try:
+            from tray4hermes.i18n import available_languages
+
+            for lang_code in available_languages():
+                if lang_code == "en":
+                    continue  # already added above
+                self._lang_keys.append(lang_code)
+                # Display name: ISO code is enough for now. A future
+                # enhancement could map "cs" → "Čeština", "de" → "Deutsch".
+                self._language.addItem(lang_code)
+        except Exception as e:  # noqa: BLE001 (importlib quirks in test envs)
+            # If i18n isn't available (e.g. test environment), the
+            # combo just shows "System" + "English" only. Non-fatal.
+            import sys as _sys
+
+            print(f"[tray4hermes] language list unavailable: {e}", file=_sys.stderr)
+        # Select current
+        if current.language is None:
+            self._language.setCurrentIndex(0)
+        else:
+            idx = 0
+            for i, k in enumerate(self._lang_keys):
+                if k == current.language:
+                    idx = i
+                    break
+            self._language.setCurrentIndex(idx)
+        row.addWidget(self._language)
+        layout.addLayout(row)
+
+        # Hint about restart
+        hint = QLabel(_("ℹ Změna jazyka se projeví po restartu tray4hermes."))
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: gray; font-size: 9pt;")
+        layout.addWidget(hint)
+
+        # ── OK / Cancel ───────────────────────────────────────────────
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
+    @staticmethod
+    def _section_label(text: str) -> QLabel:
+        """A bold sub-header for grouping related controls."""
+        lbl = QLabel(text)
+        lbl.setStyleSheet("font-weight: bold; font-size: 11pt; margin-top: 10px;")
+        return lbl
+
     def result_settings(self) -> LogSettings:
+        """Build a fresh LogSettings from the dialog's current widget state."""
         levels = tuple(lvl for lvl, cb in self._level_checks.items() if cb.isChecked())
+        tw_idx = self._time_window.currentIndex()
+        tw_key = self._tw_keys[tw_idx] if 0 <= tw_idx < len(self._tw_keys) else "all"
+        lang_idx = self._language.currentIndex()
+        language = self._lang_keys[lang_idx] if 0 <= lang_idx < len(self._lang_keys) else None
         return LogSettings(
             max_lines=self._max_lines.value(),
             auto_scroll=self._auto_scroll.isChecked(),
             word_wrap=self._word_wrap.isChecked(),
             font_size=self._font_size.value(),
             show_levels=levels,
+            show_tracebacks=self._show_tracebacks.isChecked(),
+            time_window_minutes=self._tw_map.get(tw_key, 0),
+            reverse_order=self._reverse.isChecked(),
+            language=language,
         )
 
 
@@ -833,17 +972,61 @@ class LogDialog(QDialog):
         self._search.clear()
 
     def _open_settings(self) -> None:
+        """Open the full settings dialog and apply all changes on OK.
+
+        After the dialog closes with OK:
+        - All settings (max_lines, font_size, time_window, reverse,
+          tracebacks, levels, word_wrap, auto_scroll) are applied
+          immediately to the running viewer.
+        - The toolbar toggle buttons are re-synced to match the new
+          state (so the UI doesn't lie about what's active).
+        - The ``language`` field is persisted. If it changed, we
+          call ``i18n.switch_language`` so the next widget rebuild
+          picks up the new translation. Existing widgets keep
+          their already-rendered strings — a full hot-swap would
+          require rebuilding every QAction and QLabel, which we
+          don't do (the hint in the dialog says "restart for
+          language change").
+        - Everything is saved to state.json via _save_log_settings.
+        """
         dlg = LogSettingsDialog(self._settings, self)
-        if dlg.exec_() == QDialog.Accepted:
-            self._settings = dlg.result_settings()
-            self._apply_settings()
-            # Update toolbar toggles to match
-            self._btn_autoscroll.setChecked(self._settings.auto_scroll)
-            self._btn_wrap.setChecked(self._settings.word_wrap)
-            for lvl, cb in self._level_checkboxes.items():
-                cb.setChecked(lvl in self._settings.show_levels)
-            _save_log_settings(self._settings)
-            self._refresh()
+        if dlg.exec_() != QDialog.Accepted:
+            return
+
+        old_language = self._settings.language
+        self._settings = dlg.result_settings()
+        self._apply_settings()
+
+        # Re-sync toolbar toggles so they reflect the new state.
+        self._btn_autoscroll.setChecked(self._settings.auto_scroll)
+        self._btn_wrap.setChecked(self._settings.word_wrap)
+        self._btn_reverse.setChecked(self._settings.reverse_order)
+        self._tb_checkbox.setChecked(self._settings.show_tracebacks)
+        for lvl, cb in self._level_checkboxes.items():
+            cb.setChecked(lvl in self._settings.show_levels)
+        # Max-lines spinbox
+        self._max_lines_spin.setValue(self._settings.max_lines)
+        # Time-window combo
+        for i, k in enumerate(self._time_keys):
+            if self._time_choices.get(k, 0) == self._settings.time_window_minutes:
+                self._time_combo.setCurrentIndex(i)
+                break
+
+        # Language change: persist + switch the gettext binding.
+        # Existing strings stay in the old language until the dialog
+        # is rebuilt (we told the user "restart for full effect" in
+        # the hint label).
+        if self._settings.language != old_language:
+            try:
+                from tray4hermes.i18n import switch_language
+
+                switch_language(self._settings.language or "en")
+            except Exception as e:  # noqa: BLE001
+                # i18n not fully wired in test envs; non-fatal.
+                print(f"[tray4hermes] language switch failed: {e}", file=__import__("sys").stderr)
+
+        _save_log_settings(self._settings)
+        self._refresh()
 
     # Esc closes dialog (override default reject)
     def keyPressEvent(self, event) -> None:  # noqa: N802
