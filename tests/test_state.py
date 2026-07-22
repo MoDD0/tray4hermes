@@ -106,12 +106,35 @@ class TestGatewayStateFile:
 
         f = hermes_home / "gateway_state.json"
         f.write_text(json.dumps({"running": True, "discord": True}))
-        # Backdate by 60s — well past the 30s freshness window
-        old = time.time() - 60
+        # Backdate by 60s past the 1h freshness window
+        old = time.time() - (3600 + 60)
         import os as _os
 
         _os.utime(f, (old, old))
         assert read_gateway_state_file() is None
+
+    def test_within_freshness_window(self, hermes_home: Path) -> None:
+        # Fresh within 1h is the default
+        f = hermes_home / "gateway_state.json"
+        f.write_text(json.dumps({"running": True}))
+        d = read_gateway_state_file()
+        assert d is not None
+
+    def test_custom_max_age(self, hermes_home: Path) -> None:
+        # Caller can override max_age for the relaxed read
+        import time
+
+        f = hermes_home / "gateway_state.json"
+        f.write_text(json.dumps({"running": True}))
+        old = time.time() - 7200  # 2h old
+        import os as _os
+
+        _os.utime(f, (old, old))
+        # Default 1h → None
+        assert read_gateway_state_file() is None
+        # 24h override → still readable
+        d = read_gateway_state_file(max_age=24 * 3600)
+        assert d is not None
 
     def test_fresh_file_returns_dict(self, hermes_home: Path) -> None:
         (hermes_home / "gateway_state.json").write_text(

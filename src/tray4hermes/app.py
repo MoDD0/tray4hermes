@@ -53,7 +53,17 @@ class HermesTray:
         self._icons = {code: make_icon(color) for code, color in STATE_COLORS.items()}
         self._current_code: str | None = None
 
-        self._tray = QSystemTrayIcon()
+        # Parent the tray to the QApplication so it survives any parent
+        # destruction (the test case showed that without a parent, an
+        # immediate show() + DBus register works; inside HermesTray we
+        # wanted to be defensive but a parent doesn't hurt).
+        self._tray = QSystemTrayIcon(self.app)
+        # Set icon and tooltip BEFORE show() so the very first paint
+        # already has a glyph. Without this, the tray may register
+        # empty and be ignored by KDE's StatusNotifierWatcher.
+        self._tray.setIcon(self._icons["unknown"])
+        self._tray.setToolTip(STATE_TOOLTIPS["unknown"])
+        # Tooltip with menu must also exist for some shells
         self._tray.activated.connect(self._on_activated)
 
         # Build menu actions (rebuilt on profile change to keep radio group in sync)
@@ -67,8 +77,25 @@ class HermesTray:
         self._timer.timeout.connect(self._refresh)
         self._timer.start(REFRESH_INTERVAL_MS)
 
+        # Run an immediate refresh so the icon is correct on first paint
+        # (not the unknown placeholder) — and so the very first
+        # StatusNotifierItem registration carries the right glyph.
         self._refresh()
+
         self._tray.show()
+        # Process pending events so the StatusNotifierItem registers on
+        # the session bus BEFORE the event loop starts. Without this,
+        # some KDE 6 shells see an empty/uninitialized tray and drop
+        # the registration.
+        self.app.processEvents()
+        # DEBUG: confirm registration — removed once the icon is reliable
+        if "TRAY4HERMES_DEBUG" in os.environ:
+            print(
+                f"[tray4hermes] shown={self._tray.isVisible()} "
+                f"geometry={self._tray.geometry()} "
+                f"iconNull={self._tray.icon().isNull()}",
+                file=sys.stderr,
+            )
 
     # ── Menu construction ───────────────────────────────────────────────────
     def _build_menu(self) -> QMenu:

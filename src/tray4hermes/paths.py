@@ -14,7 +14,11 @@ from pathlib import Path
 
 # ── Tunables (pure values, safe at module level) ────────────────────────────
 SERVICE: str = "hermes-gateway.service"
-GATEWAY_STATE_MAX_AGE: int = 30  # seconds; older = ignored, fallback to systemd
+# gateway_state.json is rewritten only on state transitions (connect, disconnect,
+# platform errors), not on every API call. 30s is too short — a stable connected
+# gateway would always show as "warming" because the file is hours old. 1 hour
+# is enough to catch real outages while still detecting stale data.
+GATEWAY_STATE_MAX_AGE: int = 3600  # seconds
 LOG_TAIL_BYTES: int = 256 * 1024  # how much of gateway.log the dialog reads
 REFRESH_INTERVAL_MS: int = 5000  # period between state polls
 LOG_REFRESH_INTERVAL_MS: int = 2000  # period between log-tail reads

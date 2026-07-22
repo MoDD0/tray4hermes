@@ -113,11 +113,11 @@ def _gateway_state_path() -> Path:
     return _hermes_home() / "gateway_state.json"
 
 
-def read_gateway_state_file() -> dict[str, object] | None:
-    """Parse gateway_state.json if it exists and is fresh (< GATEWAY_STATE_MAX_AGE)."""
+def read_gateway_state_file(max_age: int = GATEWAY_STATE_MAX_AGE) -> dict[str, object] | None:
+    """Parse gateway_state.json if it exists and is fresh (< max_age)."""
     p = _gateway_state_path()
     try:
-        if time.time() - p.stat().st_mtime > GATEWAY_STATE_MAX_AGE:
+        if time.time() - p.stat().st_mtime > max_age:
             return None
         with open(p) as f:
             result: dict[str, object] = json.load(f)
@@ -192,14 +192,36 @@ def systemd_is_active() -> str | None:
 
 
 def aggregate_state() -> GatewayState:
-    """Combine gateway_state.json (primary) + systemd (fallback) into one state."""
+    """Combine gateway_state.json (primary) + systemd (fallback) into one state.
+
+    Two-stage gateway_state.json read:
+      1. fresh (< GATEWAY_STATE_MAX_AGE = 1h) → use as primary source
+      2. stale but recent (< 24h) → only used to recover connection info,
+         since platform state changes are sticky (a connected gateway stays
+         connected for hours unless the user explicitly restarts)
+      3. very stale or missing → systemd tells us "running" but we can't
+         confirm platform state, so show warming
+    """
     gw = read_gateway_state_file()
     if gw is not None:
         if gw.get("running") is False:
             return GatewayState(INACTIVE, "Gateway hlásí stopped")
+        # Real gateway_state.json schema uses `platforms.{name}.state == "connected"`,
+        # not a top-level `discord: true`. The `discord` key in some legacy formats
+        # was a bool — handle both.
         if gw.get("discord") or gw.get("platforms"):
             return GatewayState(ACTIVE, "Gateway běží a je připojená")
         return GatewayState(WARMING, "Gateway běží, čeká na připojení")
+
+    # Primary state file is stale/missing. Try a one-off relaxed read —
+    # a recent file with a connected Discord platform is still trustworthy
+    # as a "last known good" snapshot. We don't downgrade to FAILED on
+    # stale data alone; the systemd active check covers that.
+    gw_stale = read_gateway_state_file(max_age=24 * 3600)
+    if gw_stale is not None and (gw_stale.get("discord") or gw_stale.get("platforms")):
+        s = systemd_is_active()
+        if s == ACTIVE:
+            return GatewayState(ACTIVE, "Gateway běží (z cache gateway_state.json)")
 
     s = systemd_is_active()
     if s == ACTIVE:
