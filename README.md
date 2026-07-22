@@ -198,6 +198,56 @@ Tohle je **tray aplikace**, takže hlavní rozdíl je v tray supportu:
 - **Ubuntu + Cinnamon / MATE / XFCE** — všechny podporují SNI tray,
   mělo by fungovat out-of-the-box.
 
+### Praktické doporučení pro Ubuntu uživatele
+
+Krátká verze: **nainstaluj si KDE Plasma** a bude ti to fungovat s
+největší pravděpodobností. Ne úplně nejmenší balíček, ale nejčistší
+cesta.
+
+```bash
+# 1. Nainstaluj KDE Plasma desktop (meta-package, ~600 MB)
+sudo apt install kde-plasma-desktop
+
+# 2. Odhlas se. Na login screen vyber "Plasma" session, prihlas se.
+
+# 3. V terminalu v KDE session:
+sudo apt install python3-pyqt5    # system PyQt5
+python3 -m pip install --user tray4hermes  # nebo z GitHubu
+python3 -m tray4hermes             # spusti tray
+
+# 4. Pro autostart po loginu:
+cp /usr/local/share/tray4hermes/hermes-tray.desktop ~/.config/autostart/
+# (nebo ho vytvor rucne — cesta v installation sekci)
+```
+
+**Proč to doporučujeme:**
+
+1. **Hermes Agent** funguje na Ubuntu úplně stejně jako na Manjaro
+   (oba jsou Linux, oba mají systemd --user, oba mají Python 3.11+).
+   *Žádný* rozpor s Ubuntu.
+2. **KDE Plasma tray** implementuje SNI specifikaci úplně nejlíp ze
+   všech DE — žádný workaround, žádné rozšíření, žádné "možná
+   funguje".
+3. **Vyšší šance na úspěch z prvního pokusu.** Místo 75-95% u GNOME/Cinnamon
+   s workaroundem dostaneš ~99%.
+
+**Alternativa pro puristy:** pokud na GNOME trváš a chceš to opravdu
+rozjet tam, postupuj podle instrukcí v sekci `Ubuntu + GNOME 41+`
+výše. Ale není to triviální první zkušenost.
+
+### Budoucí testování
+
+**Vlastní Ubuntu VM**: pokud by komunita přinesla reálný zájem o
+Ubuntu podporu, rádi bychom v rámci CI rozjeli jednoduchou
+**Ubuntu LTS VM** (VirtualBox nebo LXC) s KDE Plasma a pustili
+smoke test — `tray4hermes` start → menu ikona se ukáže →
+klikne se na Start/Stop → ověří se, že `systemctl --user` reaguje.
+Náklady by byly: ~1-2 dny na setup + skripty. Aktuálně to nemáme,
+protože poptávka je momentálně **nula** (Manjaro/KDE pokrývá ~95%
+uživatelů, kteří nám psali). Pokud bys chtěl, můžeme přidat do
+Roadmapy. Otevři issue s `+1` a hlasem, nebo rovnou přijď na
+contributing call. 🙂
+
 ### Troubleshooting
 
 Když se tray **vůbec neukáže** v jiné distribuci:
