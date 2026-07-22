@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from dataclasses import replace as dc_replace
+from datetime import datetime, timedelta
 
 from PyQt5.QtCore import QRect, QRegularExpression, QSize, Qt, QTimer
 from PyQt5.QtGui import (
@@ -31,6 +33,7 @@ from PyQt5.QtGui import (
 from PyQt5.QtWidgets import (
     QAction,
     QCheckBox,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
@@ -39,7 +42,6 @@ from PyQt5.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QSpinBox,
-    QTextEdit,
     QToolBar,
     QVBoxLayout,
     QWidget,
@@ -59,7 +61,17 @@ class LogSettings:
     auto_scroll: bool = True
     word_wrap: bool = False
     font_size: int = 9
-    show_levels: tuple[str, ...] = ("ERROR", "WARNING", "INFO", "DEBUG", "TRACE")
+    show_levels: tuple[str, ...] = (
+        "DEBUG",
+        "INFO",
+        "WARNING",
+        "ERROR",
+        "CRITICAL",
+        "TRACE",
+    )
+    show_tracebacks: bool = True
+    time_window_minutes: int = 0  # 0 = show everything
+    reverse_order: bool = False  # False = newest at bottom (tail -f style)
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -68,6 +80,9 @@ class LogSettings:
             "word_wrap": self.word_wrap,
             "font_size": self.font_size,
             "show_levels": list(self.show_levels),
+            "show_tracebacks": self.show_tracebacks,
+            "time_window_minutes": self.time_window_minutes,
+            "reverse_order": self.reverse_order,
         }
 
     @classmethod
@@ -81,6 +96,9 @@ class LogSettings:
             show_levels=tuple(str(x) for x in levels)
             if isinstance(levels, (list, tuple))
             else cls.show_levels,
+            show_tracebacks=bool(data.get("show_tracebacks", True)),
+            time_window_minutes=int(data.get("time_window_minutes", 0)),
+            reverse_order=bool(data.get("reverse_order", False)),
         )
 
     @classmethod
@@ -116,6 +134,9 @@ def _save_log_settings(settings: LogSettings) -> None:
 
     p = tray_state_file()
     try:
+        # Ensure the parent config dir exists (first run after install
+        # or under isolated test XDG_CONFIG_HOME).
+        p.parent.mkdir(parents=True, exist_ok=True)
         try:
             with open(p) as f:
                 data = _json.load(f)
@@ -145,6 +166,7 @@ LEVEL_COLORS: dict[str, QColor] = {
     "CRITICAL": QColor("#dc2626"),  # strong red
     "FATAL": QColor("#dc2626"),  # alias for CRITICAL
     "TRACE": QColor("#4b5563"),  # darker gray
+    "TRACEBACK": QColor("#fb923c"),  # warm orange — distinct from WARNING
 }
 
 # Aliases so a user with WARN / FATAL in their logs gets the same
@@ -153,6 +175,36 @@ _LEVEL_ALIASES: dict[str, str] = {
     "WARN": "WARNING",
     "FATAL": "CRITICAL",
 }
+
+# A line is considered a "traceback context" (continuation of a stack trace)
+# if it matches any of these patterns. They cover the common Python
+# `logging` output for unhandled exceptions:
+#
+#   Traceback (most recent call last):
+#     File "/usr/lib/...", line 123, in func_name        ← 2 spaces
+#       x = foo()                                        ← 4 spaces
+#           ^                                            ← 4 spaces + ^
+#   RuntimeError: boom
+#   During handling of the above exception, another exception occurred:
+_TRACEBACK_LINE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"^Traceback \(most recent call last\):"),
+    # Exception line at the bottom of a traceback (flush-left, e.g.
+    # "RuntimeError: boom", "ValueError: nope", "ZeroDivisionError")
+    re.compile(
+        r"^[A-Za-z][A-Za-z0-9_]*(?:Error|Exception|Warning|Interrupt|Exit|StopIteration|KeyboardInterrupt)"
+    ),
+    # Exception line indented (e.g. "  RuntimeError: boom")
+    re.compile(
+        r"^[ ]{2,}[A-Za-z]+(?:Error|Exception|Warning|Interrupt|Exit|StopIteration|KeyboardInterrupt)"  # noqa: E501 (regex)
+    ),
+    # File "x", line N — 2-space indent (Python stdlib format)
+    re.compile(r'^[ ]{2,}File ".*", line \d+'),
+    # pointer line under the failing line (col-aligned)
+    re.compile(r"^[ ]{4,}\^"),
+    re.compile(r"^During handling of the above exception,"),
+    # "The above exception was the direct cause of the following exception:"
+    re.compile(r"^The above exception was the direct cause"),
+)
 
 # Critical lines get a full-row red highlight (like the reference).
 CRITICAL_BG = QColor("#7f1d1d")
@@ -443,6 +495,7 @@ class LogDialog(QDialog):
         # Re-apply level filter when toggles change
         for cb in self._level_checkboxes.values():
             cb.stateChanged.connect(self._on_level_toggle)
+        self._tb_checkbox.stateChanged.connect(self._on_traceback_toggle)
 
         # Keyboard shortcuts
         QAction("Find", self, shortcut="Ctrl+F", triggered=self._focus_search)
@@ -465,6 +518,51 @@ class LogDialog(QDialog):
         tb = QToolBar("Log toolbar")
         tb.setMovable(False)
         tb.setIconSize(QSize(16, 16))
+
+        # Buffer-size spinner — how many tail lines to keep. 0 = no limit.
+        tb.addWidget(QLabel("Max řádků: "))
+        self._max_lines_spin = QSpinBox()
+        self._max_lines_spin.setRange(0, 100_000)
+        self._max_lines_spin.setSingleStep(500)
+        self._max_lines_spin.setValue(self._settings.max_lines)
+        self._max_lines_spin.setToolTip(
+            "Maximální počet řádků v bufferu (0 = bez limitu).\n"
+            "Starší řádky jsou průběžně odstraňovány."
+        )
+        self._max_lines_spin.valueChanged.connect(self._on_max_lines_changed)
+        tb.addWidget(self._max_lines_spin)
+
+        # Time-range filter — only show lines newer than this many minutes.
+        tb.addSeparator()
+        tb.addWidget(QLabel("Čas: "))
+        self._time_combo = QComboBox()
+        self._time_combo.addItems(["Vše", "5m", "15m", "1h", "6h", "24h"])
+        # Map label → minutes; 0 means "no time filter"
+        self._time_choices = {"Vše": 0, "5m": 5, "15m": 15, "1h": 60, "6h": 360, "24h": 1440}
+        # Pre-select based on settings
+        current_label = "Vše"
+        for label, mins in self._time_choices.items():
+            if mins == self._settings.time_window_minutes:
+                current_label = label
+                break
+        self._time_combo.setCurrentText(current_label)
+        self._time_combo.setToolTip("Zobrazit pouze řádky z posledních X minut (0 = vše).")
+        self._time_combo.currentTextChanged.connect(self._on_time_changed)
+        tb.addWidget(self._time_combo)
+
+        # Reverse order toggle — newest line at top (journalctl style)
+        # vs default newest at bottom (tail -f style).
+        self._btn_reverse = QAction(
+            "Obrátit", self, checkable=True, checked=self._settings.reverse_order
+        )
+        self._btn_reverse.setToolTip(
+            "Při zapnutí: nejnovější řádky nahoře (journalctl styl).\n"
+            "Při vypnutí: nejnovější dole (tail -f styl)."
+        )
+        self._btn_reverse.toggled.connect(self._on_reverse_toggle)
+        tb.addAction(self._btn_reverse)
+
+        tb.addSeparator()
 
         # Auto-scroll toggle
         self._btn_autoscroll = QAction(
@@ -491,6 +589,16 @@ class LogDialog(QDialog):
             cb.setStyleSheet(f"QCheckBox {{ color: {LEVEL_COLORS[level].name()}; }}")
             tb.addWidget(cb)
             self._level_checkboxes[level] = cb
+
+        # Traceback toggle — separate category from log levels. Defaults to
+        # ON because stack-trace continuations are usually what you want
+        # to see alongside the triggering ERROR line.
+        self._tb_checkbox = QCheckBox("TRACEBACK")
+        self._tb_checkbox.setChecked(self._settings.show_tracebacks)
+        self._tb_checkbox.setStyleSheet(
+            f"QCheckBox {{ color: {LEVEL_COLORS['TRACEBACK'].name()}; font-weight: bold; }}"
+        )
+        tb.addWidget(self._tb_checkbox)
 
         tb.addSeparator()
 
@@ -532,9 +640,10 @@ class LogDialog(QDialog):
     def _apply_settings(self) -> None:
         # Buffer limit (rolling window)
         self._editor.setMaximumBlockCount(self._settings.max_lines)
-        # Wrap mode
+        # Wrap mode — use QPlainTextEdit's own enum (not QTextEdit's) because
+        # the integer values differ between the two classes.
         wrap = (
-            QTextEdit.LineWrapMode.WidgetWidth
+            QPlainTextEdit.LineWrapMode.WidgetWidth
             if self._settings.word_wrap
             else QPlainTextEdit.NoWrap
         )
@@ -560,26 +669,64 @@ class LogDialog(QDialog):
             return
 
         text = data.decode("utf-8", errors="replace")
-        # Apply level filter — only when the user has hidden at least one
-        # of the *known* levels. Unparseable lines (no timestamp = no level)
-        # and lines from levels the user has never heard of always pass
-        # through — they are typically stack-trace continuations or
-        # interleaved output that should never be hidden by a level filter.
-        # Aliases (WARN→WARNING, FATAL→CRITICAL) are honored so a user
-        # with non-stdlib formatters gets the right filter behavior.
-        known_levels = set(LEVEL_COLORS.keys())
+        lines = text.splitlines()
+
+        # ── Filter pipeline ───────────────────────────────────────────────
+        # 1) Time-window filter — drop lines older than (now - window).
+        #    Lines without a parseable timestamp pass through (they're
+        #    traceback continuations or noise; the next stage deals with them).
+        time_window_minutes = self._settings.time_window_minutes
+        if time_window_minutes > 0:
+            cutoff = datetime.now() - timedelta(minutes=time_window_minutes)
+            kept: list[str] = []
+            last_seen_ts: datetime | None = None
+            for line in lines:
+                ts = _line_timestamp(line)
+                if ts is not None:
+                    last_seen_ts = ts
+                # Apply cutoff only to lines WITH a timestamp (so
+                # traceback continuations next to a fresh ERROR line
+                # stay visible). Without a timestamp, follow the
+                # nearest neighbor's decision.
+                if last_seen_ts is not None and last_seen_ts < cutoff:
+                    continue
+                kept.append(line)
+            lines = kept
+
+        # 2) Level + traceback filter.
+        #    Every line is classified as either a known level
+        #    (DEBUG/INFO/WARNING/ERROR/CRITICAL/TRACE) or as "traceback
+        #    context" (stack-trace continuation). The user toggles which
+        #    of these categories are visible. Unparseable lines (truly
+        #    neither) are dropped — that prevents the curator-snapshot
+        #    dumps from leaking through when filtered.
+        known_levels = set(LEVEL_COLORS.keys()) - {"TRACEBACK"}
         active = set(self._settings.show_levels)
-        # Normalize aliases: any alias counts as its canonical
-        active_canonical = {(_LEVEL_ALIASES.get(lvl, lvl)) for lvl in active}
-        known_canonical = {(_LEVEL_ALIASES.get(lvl, lvl)) for lvl in known_levels}
+        active_canonical = {_LEVEL_ALIASES.get(lvl, lvl) for lvl in active}
+        known_canonical = {_LEVEL_ALIASES.get(lvl, lvl) for lvl in known_levels}
         hidden = known_canonical - active_canonical
-        if hidden:
-            text = "\n".join(
-                line
-                for line in text.splitlines()
-                if (level := _line_level(line)) is None
-                or _LEVEL_ALIASES.get(level, level) not in hidden
-            )
+        show_tr = self._settings.show_tracebacks
+
+        def _keep(line: str) -> bool:
+            level = _line_level(line)
+            if level is not None:
+                canonical = _LEVEL_ALIASES.get(level, level)
+                return canonical not in hidden
+            if _is_traceback_line(line):
+                return show_tr
+            return False
+
+        # Always run the filter — even with default settings we want to
+        # drop unparseable noise (curator dumps, RSS lines) that would
+        # otherwise fill the buffer.
+        lines = [line for line in lines if _keep(line)] if lines else lines
+
+        # 3) Reverse order — "newest at top" instead of the default
+        #    "newest at bottom" (tail -f style).
+        if self._settings.reverse_order:
+            lines = list(reversed(lines))
+
+        text = "\n".join(lines)
 
         scrollbar = self._editor.verticalScrollBar()
         at_bottom = scrollbar.value() >= scrollbar.maximum() - 4
@@ -613,40 +760,42 @@ class LogDialog(QDialog):
         )
 
     # ── Event handlers ────────────────────────────────────────────────────
+    def _update_with(self, **kwargs) -> None:
+        """Mutate settings, save, and re-render. Used by every toolbar toggle."""
+        self._settings = dc_replace(self._settings, **kwargs)
+        _save_log_settings(self._settings)
+        self._apply_settings()
+        self._refresh()
+        self._update_status()
+
+    def _on_max_lines_changed(self, value: int) -> None:
+        # 0 means "no limit" — setMaximumBlockCount(0) is documented as
+        # "remove the limit", so that's Qt-native and we just propagate.
+        self._update_with(max_lines=value)
+
     def _on_autoscroll_toggle(self, checked: bool) -> None:
-        self._settings = LogSettings(
-            max_lines=self._settings.max_lines,
-            auto_scroll=checked,
-            word_wrap=self._settings.word_wrap,
-            font_size=self._settings.font_size,
-            show_levels=self._settings.show_levels,
-        )
+        # autoscroll doesn't need re-render — but we still want the
+        # status bar updated so the user sees the new state.
+        self._settings = dc_replace(self._settings, auto_scroll=checked)
         _save_log_settings(self._settings)
         self._update_status()
 
     def _on_wrap_toggle(self, checked: bool) -> None:
-        self._settings = LogSettings(
-            max_lines=self._settings.max_lines,
-            auto_scroll=self._settings.auto_scroll,
-            word_wrap=checked,
-            font_size=self._settings.font_size,
-            show_levels=self._settings.show_levels,
-        )
-        self._apply_settings()
-        _save_log_settings(self._settings)
+        self._update_with(word_wrap=checked)
 
     def _on_level_toggle(self) -> None:
-        # Re-read checkbox state
         levels = tuple(lvl for lvl, cb in self._level_checkboxes.items() if cb.isChecked())
-        self._settings = LogSettings(
-            max_lines=self._settings.max_lines,
-            auto_scroll=self._settings.auto_scroll,
-            word_wrap=self._settings.word_wrap,
-            font_size=self._settings.font_size,
-            show_levels=levels,
-        )
-        _save_log_settings(self._settings)
-        self._refresh()
+        self._update_with(show_levels=levels)
+
+    def _on_traceback_toggle(self, checked: bool) -> None:
+        self._update_with(show_tracebacks=checked)
+
+    def _on_time_changed(self, label: str) -> None:
+        minutes = self._time_choices.get(label, 0)
+        self._update_with(time_window_minutes=minutes)
+
+    def _on_reverse_toggle(self, checked: bool) -> None:
+        self._update_with(reverse_order=checked)
 
     def _focus_search(self) -> None:
         self._search.setFocus()
@@ -684,11 +833,48 @@ _LEVEL_RE = re.compile(
     r")([A-Z]+)(?:\]|:)?\s"
 )
 
+# Captures the leading timestamp (and nothing else) so callers can
+# re-format / time-filter without re-running regex.
+_TIMESTAMP_RE = re.compile(
+    r"^(?P<date>\d{4}[-/]\d{2}[-/]\d{2})(?:[T ](?P<time>\d{2}:\d{2}:\d{2}(?:[,\.]\d+)?))?"
+    r"|^\[(?P<date2>\d{4}[-/]\d{2}[-/]\d{2})(?:[T ](?P<time2>\d{2}:\d{2}:\d{2}(?:[,\.]\d+)?))?\]"
+)
+
 
 def _line_level(line: str) -> str | None:
     """Return the log level of a line, or None if it doesn't match."""
     m = _LEVEL_RE.match(line)
     return m.group(1) if m else None
+
+
+def _line_timestamp(line: str) -> datetime | None:
+    """Extract a datetime from the leading timestamp on a log line.
+
+    Returns None when the line has no parseable timestamp (e.g. a
+    traceback continuation). The time-based filter uses this to
+    decide whether a line is inside the configured window.
+    """
+    m = _TIMESTAMP_RE.match(line)
+    if not m:
+        return None
+    date = m.group("date") or m.group("date2")
+    time = (m.group("time") or m.group("time2") or "00:00:00").replace(",", ".")
+    try:
+        return datetime.fromisoformat(f"{date}T{time}")
+    except ValueError:
+        return None
+
+
+def _is_traceback_line(line: str) -> bool:
+    """True if `line` looks like a Python stack-trace continuation.
+
+    Used by the level filter to give stack-trace lines their own toggle
+    (TRACEBACK) so the user can show only the message (no traceback),
+    only the traceback (no surrounding log noise), or everything.
+    """
+    if not line:
+        return False
+    return any(p.match(line) for p in _TRACEBACK_LINE_PATTERNS)
 
 
 # Late import to keep `os` in one place at the bottom of the file.

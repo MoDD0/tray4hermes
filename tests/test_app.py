@@ -119,10 +119,16 @@ class TestLogDialog:
         assert dlg._editor.toPlainText() == ""
 
     def test_dialog_reads_existing_log(self, hermes_home, qtbot) -> None:
-        # Write some lines to a log file in the standard location
+        # Write some lines that include a level, plus a traceback
+        # continuation, so they survive the default filter
+        # (show_tracebacks=True).
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
-        log.write_text("line 1\nline 2\nline 3\n")
+        log.write_text(
+            "2026-07-22 10:00:00 INFO line 1\n"
+            "2026-07-22 10:00:01 INFO line 2\n"
+            "2026-07-22 10:00:02 INFO line 3\n"
+        )
         from tray4hermes.logs_view import LogDialog
 
         dlg = LogDialog()
@@ -130,6 +136,118 @@ class TestLogDialog:
         text = dlg._editor.toPlainText()
         assert "line 1" in text
         assert "line 3" in text
+
+    def test_reverse_order_toggle(self, hermes_home, qtbot) -> None:
+        # Default order: newest at bottom (tail -f). Reversed: newest at top.
+        from tray4hermes.logs_view import LogDialog, LogSettings
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text(
+            "2026-07-22 10:00:00 INFO first\n"
+            "2026-07-22 10:00:01 INFO second\n"
+            "2026-07-22 10:00:02 INFO third\n"
+        )
+        dlg = LogDialog()
+        dlg._refresh()
+        original = dlg._editor.toPlainText().splitlines()
+        assert original[0].endswith("first")
+        assert original[-1].endswith("third")
+
+        # Toggle reverse
+        object.__setattr__(dlg, "_settings", LogSettings(reverse_order=True))
+        dlg._refresh()
+        reversed_lines = dlg._editor.toPlainText().splitlines()
+        assert reversed_lines[0].endswith("third")
+        assert reversed_lines[-1].endswith("first")
+
+    def test_time_filter_disabled_keeps_all(self, hermes_home, qtbot) -> None:
+        # With time_window_minutes=0 the filter is disabled; everything
+        # in the file passes through.
+        from datetime import datetime, timedelta
+
+        from tray4hermes.logs_view import LogDialog
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        old_dt = datetime.now() - timedelta(days=365)  # a year ago
+        log.write_text(
+            f"{old_dt.strftime('%Y-%m-%d %H:%M:%S')} INFO very_old_line\n"
+            f"{old_dt.strftime('%Y-%m-%d %H:%M:%S')} ERROR very_old_error\n"
+        )
+        dlg = LogDialog()
+        # Default (time_window_minutes=0) → no time filter
+        dlg._refresh()
+        text = dlg._editor.toPlainText()
+        assert "very_old_line" in text
+        assert "very_old_error" in text
+
+    def test_max_lines_spinbox_zero_means_unlimited(self, hermes_home, qtbot) -> None:
+        # Setting max_lines=0 removes the rolling-window cap.
+        from tray4hermes.logs_view import LogDialog, LogSettings
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("\n".join(f"2026-07-22 10:00:{i:02d} INFO line {i}" for i in range(50)))
+        dlg = LogDialog()
+        object.__setattr__(dlg, "_settings", LogSettings(max_lines=0))
+        dlg._apply_settings()
+        dlg._refresh()
+        # No rolling cap → all 50 lines pass through
+        assert "line 0" in dlg._editor.toPlainText()
+        assert "line 49" in dlg._editor.toPlainText()
+        # "## Human Summary" / "rss=218MB" / "archived 31 skill(s):" are
+        # neither level-tagged nor traceback continuations. They should
+        # be dropped when the filter is active (i.e. always with the
+        # current default).
+        from tray4hermes.logs_view import LogDialog
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text(
+            "## Human Summary\n"
+            "rss=218MB threads=7\n"
+            "archived 31 skill(s):\n"
+            "  • foo → bar\n"
+            "2026-07-22 10:00:00 INFO  real line\n"
+        )
+        dlg = LogDialog()
+        dlg._refresh()
+        text = dlg._editor.toPlainText()
+        assert "real line" in text
+        assert "Human Summary" not in text
+        assert "rss=218MB" not in text
+        assert "archived" not in text
+
+    def test_traceback_lines_dropped_when_toggle_off(self, hermes_home, qtbot) -> None:
+        # A real Python traceback, with TRACEBACK toggle off, should be
+        # hidden — even though the triggering ERROR line stays visible.
+        from tray4hermes.logs_view import LogDialog, LogSettings
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text(
+            "2026-07-22 10:00:00 ERROR something failed\n"
+            "Traceback (most recent call last):\n"
+            '  File "x.py", line 1, in <module>\n'
+            "    raise RuntimeError('boom')\n"
+            "RuntimeError: boom\n"
+        )
+        dlg = LogDialog()
+        object.__setattr__(
+            dlg,
+            "_settings",
+            LogSettings(
+                show_levels=("ERROR", "WARNING", "INFO", "DEBUG", "TRACE"),
+                show_tracebacks=False,
+            ),
+        )
+        dlg._refresh()
+        text = dlg._editor.toPlainText()
+        assert "ERROR something failed" in text
+        assert "Traceback" not in text
+        assert 'File "x.py"' not in text
+        assert "RuntimeError: boom" not in text
 
     def test_level_filter_hides_other_levels(self, hermes_home, qtbot) -> None:
         # If only ERROR is enabled, WARN/INFO lines should be hidden after refresh
