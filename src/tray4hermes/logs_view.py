@@ -847,17 +847,15 @@ class LogDialog(QDialog):
         text = "\n".join(lines)
 
         scrollbar = self._editor.verticalScrollBar()
-        at_bottom = scrollbar.value() >= scrollbar.maximum() - 4
-        # Hooks reserved for future per-line append optimization (would let us
-        # avoid resetting the cursor). Kept as no-ops to make the intent
-        # explicit and silence the unused-var lint.
-        _was_modified = False  # noqa: F841
-        _cursor_pos = 0  # noqa: F841
-
+        # Replacing the document resets the cursor/scroll position. In normal
+        # tail mode the newest entry is at the bottom; in reverse mode it is
+        # at the top, so auto-scroll must follow the corresponding edge.
         self._editor.setPlainText(text)
 
-        if self._settings.auto_scroll and at_bottom:
-            scrollbar.setValue(scrollbar.maximum())
+        if self._settings.auto_scroll:
+            scrollbar.setValue(
+                scrollbar.minimum() if self._settings.reverse_order else scrollbar.maximum()
+            )
 
         self._update_status()
 

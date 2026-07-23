@@ -221,6 +221,24 @@ class TestLogDialog:
         assert reversed_lines[0].endswith("third")
         assert reversed_lines[-1].endswith("first")
 
+    def test_reverse_order_keeps_newest_line_at_top_and_scrolls_to_top(
+        self, hermes_home, qtbot
+    ) -> None:
+        from tray4hermes.logs_view import LogDialog, LogSettings
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("\n".join(f"2026-07-22 10:00:{i:02d} INFO line {i}" for i in range(100)))
+        dlg = LogDialog()
+        object.__setattr__(
+            dlg, "_settings", LogSettings(reverse_order=True, auto_scroll=True, max_lines=0)
+        )
+        dlg._apply_settings()
+        dlg._refresh()
+        scrollbar = dlg._editor.verticalScrollBar()
+        assert dlg._editor.toPlainText().splitlines()[0].endswith("line 99")
+        assert scrollbar.value() == scrollbar.minimum()
+
     def test_time_filter_disabled_keeps_all(self, hermes_home, qtbot) -> None:
         # With time_window_minutes=0 the filter is disabled; everything
         # in the file passes through.
