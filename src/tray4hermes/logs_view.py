@@ -847,15 +847,32 @@ class LogDialog(QDialog):
         text = "\n".join(lines)
 
         scrollbar = self._editor.verticalScrollBar()
-        # Replacing the document resets the cursor/scroll position. In normal
-        # tail mode the newest entry is at the bottom; in reverse mode it is
-        # at the top, so auto-scroll must follow the corresponding edge.
+        old_scroll_value = scrollbar.value()
+        old_scroll_maximum = scrollbar.maximum()
+        # Replacing the document resets the cursor/scroll position. Only
+        # follow the live-log edge when the user was already there; manual
+        # investigation in the middle of the buffer must survive refreshes.
+        at_live_edge = (
+            old_scroll_value <= scrollbar.minimum() + 4
+            if self._settings.reverse_order
+            else old_scroll_value >= old_scroll_maximum - 4
+        )
         self._editor.setPlainText(text)
 
-        if self._settings.auto_scroll:
+        if self._settings.auto_scroll and at_live_edge:
+            cursor = self._editor.textCursor()
+            cursor.movePosition(
+                QTextCursor.Start if self._settings.reverse_order else QTextCursor.End
+            )
+            self._editor.setTextCursor(cursor)
+            self._editor.ensureCursorVisible()
             scrollbar.setValue(
                 scrollbar.minimum() if self._settings.reverse_order else scrollbar.maximum()
             )
+            if self._settings.reverse_order:
+                scrollbar.setValue(scrollbar.minimum())
+        elif not at_live_edge:
+            scrollbar.setValue(old_scroll_value)
 
         self._update_status()
 
