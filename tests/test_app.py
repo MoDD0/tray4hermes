@@ -236,10 +236,66 @@ class TestLogDialog:
         dlg._apply_settings()
         dlg._refresh()
         scrollbar = dlg._editor.verticalScrollBar()
+        scrollbar.setValue(scrollbar.minimum())
+        dlg._refresh()
         assert dlg._editor.toPlainText().splitlines()[0].endswith("line 99")
         assert scrollbar.value() == scrollbar.minimum()
 
-    def test_time_filter_disabled_keeps_all(self, hermes_home, qtbot) -> None:
+    def test_refresh_preserves_manual_scroll_position(self, hermes_home, qtbot) -> None:
+        from tray4hermes.logs_view import LogDialog, LogSettings
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("\n".join(f"2026-07-22 10:00:{i:02d} INFO line {i}" for i in range(100)))
+        dlg = LogDialog()
+        object.__setattr__(dlg, "_settings", LogSettings(auto_scroll=True, max_lines=0))
+        dlg._apply_settings()
+        dlg._refresh()
+        scrollbar = dlg._editor.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum() // 2)
+        position = scrollbar.value()
+
+        dlg._refresh()
+
+        assert scrollbar.value() == position
+
+    def test_refresh_preserves_manual_reverse_scroll_position(self, hermes_home, qtbot) -> None:
+        from tray4hermes.logs_view import LogDialog, LogSettings
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("\n".join(f"2026-07-22 10:00:{i:02d} INFO line {i}" for i in range(100)))
+        dlg = LogDialog()
+        object.__setattr__(
+            dlg, "_settings", LogSettings(reverse_order=True, auto_scroll=True, max_lines=0)
+        )
+        dlg._apply_settings()
+        dlg._refresh()
+        scrollbar = dlg._editor.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum() // 2)
+        position = scrollbar.value()
+
+        dlg._refresh()
+
+        assert scrollbar.value() == position
+
+    def test_refresh_follows_edge_when_auto_scroll_enabled(self, hermes_home, qtbot) -> None:
+        from tray4hermes.logs_view import LogDialog, LogSettings
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("\n".join(f"2026-07-22 10:00:{i:02d} INFO line {i}" for i in range(100)))
+        dlg = LogDialog()
+        object.__setattr__(dlg, "_settings", LogSettings(auto_scroll=True, max_lines=0))
+        dlg._apply_settings()
+        dlg._refresh()
+        scrollbar = dlg._editor.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+
+        dlg._refresh()
+
+        assert scrollbar.value() == scrollbar.maximum()
+
         # With time_window_minutes=0 the filter is disabled; everything
         # in the file passes through.
         from datetime import datetime, timedelta
