@@ -9,9 +9,8 @@
 <!-- Available languages: en (canonical), cs -->
 <!-- i18n:available-languages:END -->
 
-Pasivní KDE/Plasma system-tray monitor pro **Hermes Gateway** — messaging
-bridge z [Hermes Agent](https://github.com/NousResearch/hermes-agent)
-od Nous Research.
+KDE/Plasma tray monitor a ovladač pro **Hermes Gateway**, messaging službu
+z [Hermes Agent](https://github.com/NousResearch/hermes-agent) od Nous Research.
 
 > tray4hermes je **read-only s ohledem na Hermes Agent**. Ovládá
 > gateway přes `systemctl --user`, perzistuje jeden malý JSON soubor
@@ -21,28 +20,17 @@ od Nous Research.
 
 ---
 
-## Proč to existuje
+## Přehled
 
-Hermes Agent je šikovný kus softwaru, ale jeho `hermes-gateway` běží
-jako **`systemd --user` service** — což znamená, že se ti defaultně
-spustí při loginu a zůstane běžet na pozadí, i když ho zrovna
-nepotřebuješ. Trochu jako Slack, Discord nebo Telegram na Windows
-— ty běží taky furt, ale mají **iconku v systray**, aby ses mohl
-rozhodnout, jestli je chceš mít aktivní, nebo je na chvíli umrtvit.
-
-Hermes tohle (zatím) nemá. Přišlo mi to škoda, a tak vznikl
-**tray4hermes** — malý Python tray, který:
+`hermes-gateway` běží jako `systemd --user` služba. tray4hermes přidává KDE
+tray rozhraní pro její monitoring a ovládání. Aplikace:
 
 - **ukazuje stav gateway** přímo v KDE liště (zelená/oranžová/červená),
 - **umožňuje Start / Stop / Restart** bez nutnosti otevírat terminál,
 - **přepíná profily** (`default`, `work`, `off`…) z menu,
-- **zobrazuje logy** v docela vyladěném vieweru (barevné levely,
+- **zobrazuje logy** ve vieweru s barevnými levely,
   filtry, hledání, traceback-aware, time-window),
-- a hlavně — **nesnaží se být chytřejší než samotný Hermes**. Jen
-  pozoruje, občas klikne, a mluví přes standardní `systemctl`.
-
-Pokud ti tedy vyhovuje filozofie "Hermes běží jen když chci, a já vidím
-co se děje" — tohle je pro tebe.
+- **čte runtime stav Hermes** a používá standardní `systemctl` API.
 
 > ⚠️ **Disclaimer:** tray4hermes je *passive convenience addon*, ne
 > oficiální komponenta Hermes Agenta. Hermes Agent funguje naprosto
@@ -68,9 +56,7 @@ tvých dalších SNI aplikací. Screenshot z Manjaro KDE session.*
 
 ### Log viewer
 
-`~/.hermes/logs/gateway.log` je často obrovský soubor plný tracebacků,
-který je potřeba *rychle* projít, ne číst od shora dolů. Proto viewer
-nabízí:
+Log viewer čte `~/.hermes/logs/gateway.log` a nabízí:
 
 - **Barevné log levely**: `DEBUG` šedá, `INFO` bílá, `WARNING` žlutá,
   `ERROR` červená, `CRITICAL` červená + celořádkový highlight
@@ -81,10 +67,12 @@ nabízí:
 - **Time-window filter** (Vše / 5m / 15m / 1h / 6h / 24h) — vidíš
   jen logy z poslední hodiny apod.
 - **Reverse order** (Obrátit) — přepne na `journalctl` styl
-  (nejnovější nahoře)
+  (nejnovější nahoře); každý nový řádek se objeví jako první
 - **Max řádků** spinbox — rolling buffer (0 = unlimited)
 - **Search** (`Ctrl+F` → `F3` next, `Shift+F3` prev, `Esc` close)
-- **Auto-scroll toggle** (default ON; OFF = zachová pozici při refresh)
+- **Auto-scroll toggle** (default ON; OFF = zachová pozici při refresh).
+  Při ručním zkoumání logu viewer zachová vybranou pozici i při zapnutém
+  auto-scrollu; živý okraj sleduje jen tehdy, když na něm už právě jsi
 - **Word-wrap toggle**
 - **Copy / Clear / Refresh** akce
 - **Settings dialog** (font size, max lines, per-level visibility, …)
@@ -93,16 +81,8 @@ nabízí:
 
 ![Log viewer demo](images/log_viewer.png)
 
-Screenshot výše ukazuje DEBUG řádek šedě a WARNING řádek žlutě
-(s `WARNING` tokenem zvýrazněným), s line numbers vlevo a status
-barem dole. Stejný dialog na tvém systému bude mít tvoje reálná
-log data — tento screenshot je ze sandboxového testu, kde se do
-fake `gateway.log` nasypaly dva ilustrační řádky.
-
-> Toolbar UI stringy jsou v češtině (`Max řádků`, `Hledat`,
-> `Nastavení`…) protože původní vývojář je čech. Pokud bys chtěl
-> anglickou lokalizaci, podívej se na
-> [Roadmap → Localization](#roadmap-next-up-ideas).
+Screenshot ukazuje barevné levely, čísla řádků a status bar. Aplikace
+podporuje anglické a české UI.
 
 ---
 

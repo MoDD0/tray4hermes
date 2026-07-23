@@ -9,10 +9,9 @@
 <!-- Available languages: en (canonical), cs -->
 <!-- i18n:available-languages:END -->
 
-A passive KDE/Plasma system-tray monitor for **Hermes Gateway** — the
-messaging bridge that ships with
-[Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous
-Research.
+A KDE/Plasma system-tray monitor and controller for **Hermes Gateway**, the
+messaging service included with
+[Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous Research.
 
 > tray4hermes is **read-only with respect to Hermes Agent**. It controls
 > the gateway via `systemctl --user`, persists one small JSON file of its
@@ -22,29 +21,17 @@ Research.
 
 ---
 
-## Why this exists
+## Overview
 
-Hermes Agent is a perfectly good piece of software, but its
-`hermes-gateway` runs as a **`systemd --user` service** — which means
-it starts automatically at login and stays running in the background
-forever, even when you don't need it. A bit like Slack, Discord, or
-Telegram on Windows: those run all the time too, but they give you
-**a tray icon** so you can decide whether you want them active or
-paused.
-
-Hermes (currently) doesn't have that. I thought that was a shame,
-and so **tray4hermes** was born — a small Python tray that:
+`hermes-gateway` runs as a `systemd --user` service. tray4hermes adds a KDE
+tray interface for monitoring and controlling it. The application:
 
 - **shows the gateway state** directly in the KDE panel (green/orange/red)
 - **lets you Start / Stop / Restart** without opening a terminal
 - **switches profiles** (`default`, `work`, `off`…) from a menu
-- **displays logs** in a rather polished viewer (colored levels,
+- **displays logs** in a viewer with colored levels,
   filters, search, traceback-aware, time-window)
-- **doesn't try to be smarter than Hermes itself**. It observes,
-  occasionally clicks, and talks to the standard `systemctl` API.
-
-So if you like the philosophy of "Hermes runs only when I want it
-to, and I can see what's going on" — this is for you.
+- **reads Hermes runtime state** and uses the standard `systemctl` API.
 
 > ⚠️ **Disclaimer:** tray4hermes is a *passive convenience addon*, not an
 > official Hermes Agent component. Hermes Agent runs perfectly well
@@ -70,9 +57,7 @@ this tray is live.*
 
 ### Log viewer
 
-`~/.hermes/logs/gateway.log` is often a huge file full of stack traces
-that you need to scroll through *quickly*, not read top-to-bottom. So
-the viewer offers:
+The log viewer reads `~/.hermes/logs/gateway.log` and provides:
 
 - **Coloured log levels**: `DEBUG` gray, `INFO` white, `WARNING` yellow,
   `ERROR` red, `CRITICAL` red + full-row highlight
@@ -82,10 +67,14 @@ the viewer offers:
   it off to see only messages, or on to keep both
 - **Time-window filter** (All / 5m / 15m / 1h / 6h / 24h) — show only
   logs from the last hour, etc.
-- **Reverse order** — flip to `journalctl` style (newest at top)
+- **Reverse order** — flip to `journalctl` style (newest at top); every new
+  entry appears first
 - **Max lines** spinbox — rolling buffer (0 = unlimited)
 - **Search** (`Ctrl+F` → `F3` next, `Shift+F3` prev, `Esc` close)
-- **Auto-scroll toggle** (default ON; OFF = preserve position on refresh)
+- **Auto-scroll toggle** (default ON; OFF = preserve position on refresh).
+  While investigating, the viewer preserves a manually selected scroll
+  position even when auto-scroll is ON; it only follows the live edge when
+  you are already viewing that edge
 - **Word-wrap toggle**
 - **Copy / Clear / Refresh** actions
 - **Settings dialog** (font size, max lines, per-level visibility, …)
@@ -94,17 +83,8 @@ the viewer offers:
 
 ![Log viewer demo](docs/images/log_viewer.png)
 
-The screenshot above shows a DEBUG line in gray and a WARNING line in
-yellow (with the `WARNING` token highlighted), line numbers on the
-left, and the status bar at the bottom. On your system the same
-dialog will show your real log data — this screenshot is from a
-sandboxed test that writes a couple of illustrative lines to a fake
-gateway.log.
-
-> The toolbar UI strings are in Czech (`Max řádků`, `Hledat`,
-> `Nastavení`…) because the original developer is Czech and finds
-> the context easy to follow. If you'd like an English localization,
-> see [Roadmap → Localization](#roadmap-next-up-ideas).
+The screenshot shows colored levels, line numbers and the status bar. The
+application supports English and Czech UI text.
 
 ---
 

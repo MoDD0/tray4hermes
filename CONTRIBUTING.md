@@ -25,6 +25,10 @@ Make a change, push, open a PR.
 4. **No writes to `~/.hermes/*`** from inside the tray — that area
    is owned by Hermes Agent.
 5. **MIT-compatible contributions.** Same license as the project.
+6. **User-visible changes update documentation in the same commit.** Edit
+   `docs/i18n/en.md` and `docs/i18n/cs.md`, then run
+   `python scripts/i18n_build.py` to regenerate `README.md` and
+   `docs/README.cs.md`.
 
 ## Adding a new translation (language)
 
