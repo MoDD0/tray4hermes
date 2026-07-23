@@ -3,6 +3,16 @@
 # Manual run: `pre-commit run --all-files`
 
 repos:
+  - repo: local
+    hooks:
+      - id: tray4hermes-semver
+        name: tray4hermes SemVer policy check
+        entry: python scripts/versioning.py --prepare-commit-msg
+        language: system
+        stages: [prepare-commit-msg]
+        always_run: true
+        pass_filenames: true
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.0
     hooks:

@@ -6,7 +6,7 @@ discrete UI states. Everything else in the app reads this — never the raw
 inputs — so we test the contract here, not the chaos.
 
 NOTE: All filesystem paths are constructed inside functions (not at
-module level) so that ``HERMES_HOME`` env var changes are picked up at
+module level) so that ``TRAY4HERMES_HOME`` env var changes are picked up at
 runtime. This is what makes the test suite's per-test isolation work.
 """
 
@@ -105,8 +105,8 @@ def save_tray_state(state: TrayState) -> None:
 
 # ── Hermes reads (best-effort, never raise into UI) ────────────────────────
 def _hermes_home() -> Path:
-    """Resolve HERMES_HOME at call time (not import time) so env overrides work."""
-    return Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes"))
+    """Resolve the monitored Hermes home at call time."""
+    return _paths.hermes_home()
 
 
 def _gateway_state_path() -> Path:

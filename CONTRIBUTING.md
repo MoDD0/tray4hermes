@@ -168,6 +168,34 @@ For non-translation PRs, follow the broader workflow:
    uv run bandit -c pyproject.toml -r src  # security scan
    ```
 
+## Versioning and completed-work commits
+
+tray4hermes follows **Semantic Versioning** and Conventional Commits. Every
+completed user-visible work unit that is committed must include its version
+bump in the same commit:
+
+| Change | Commit type | Version bump | Example from `2.0.0` |
+|---|---|---|---|
+| Backwards-compatible bug fix or promised correction | `fix:` / `perf:` | PATCH | `2.0.1` |
+| Backwards-compatible new capability | `feat:` | MINOR | `2.1.0` |
+| Breaking API/config/behavior change | `type!:` or `BREAKING CHANGE:` | MAJOR | `3.0.0` |
+| Docs/tests/chore only | `docs:` / `test:` / `chore:` | none | unchanged |
+
+Before committing completed work:
+
+1. Choose the Conventional Commit type from the table.
+2. Install hooks once with `pre-commit install --hook-type pre-commit
+   --hook-type prepare-commit-msg`. The `prepare-commit-msg` hook derives the
+   required bump from the commit type and rejects a missing or wrong bump.
+3. If hooks are unavailable, run `python scripts/versioning.py
+   patch|minor|major` manually when required.
+4. Run the full quality gates.
+5. Stage the implementation, tests, and version bump together in one commit.
+6. Do not create a tag or GitHub release unless explicitly requested.
+
+The package version has a single source of truth:
+`src/tray4hermes/__init__.py::__version__`.
+
 ## Where to ask
 
 - **Issue tracker:** https://github.com/MoDD0/tray4hermes/issues

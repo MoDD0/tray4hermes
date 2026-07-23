@@ -1,7 +1,7 @@
 """Path constants — single source of truth for every filesystem location.
 
 IMPORTANT: Path objects are wrapped in helper functions, not built at
-import time. This lets tests override ``HERMES_HOME`` / ``XDG_CONFIG_HOME``
+import time. This lets tests override ``TRAY4HERMES_HOME`` / ``XDG_CONFIG_HOME``
 via ``monkeypatch.setenv`` and have the changes take effect. If you
 add a new path, wrap it in a function the same way — do not bind a
 ``Path(...)`` at module level that reads an env var.
@@ -27,8 +27,14 @@ TRAY_STATE_VERSION: int = 1
 
 # ── Path resolvers (call these, don't import the Path directly) ─────────────
 def hermes_home() -> Path:
-    """``~/.hermes`` or whatever ``HERMES_HOME`` points to."""
-    return Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes"))
+    """Canonical Hermes home monitored by this desktop utility.
+
+    Deliberately ignore generic ``HERMES_HOME``: a tray launched from a
+    profile-scoped Hermes terminal inherits that profile path even though the
+    systemd gateway still writes runtime state to ``~/.hermes``. Use the
+    tray-specific override for tests or non-standard deployments.
+    """
+    return Path(os.environ.get("TRAY4HERMES_HOME", Path.home() / ".hermes"))
 
 
 def gateway_state() -> Path:

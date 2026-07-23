@@ -23,7 +23,9 @@ intercepted by name-shadowing in unrelated test modules.
 
 from __future__ import annotations
 
+import ast
 import builtins as _b
+from pathlib import Path
 
 import pytest
 
@@ -101,6 +103,37 @@ def test_available_languages_includes_cs() -> None:
         f"Make sure locales/cs/LC_MESSAGES/tray4hermes.mo is "
         f"compiled and reachable from this test."
     )
+
+
+def test_install_system_language_honours_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``None`` means follow the OS locale, not force English."""
+    monkeypatch.setenv("LC_ALL", "cs_CZ.UTF-8")
+    i18n.install(language=None)
+    assert i18n._("Settings") == "Nastavení"
+
+
+def test_language_display_names_are_human_readable() -> None:
+    assert i18n.language_display_name(None) == "System (follow locale)"
+    assert i18n.language_display_name("en") == "English"
+    assert i18n.language_display_name("cs") == "Čeština"
+
+
+def test_gettext_source_strings_use_english_msgids() -> None:
+    """English is canonical; Czech belongs only in the cs catalogue."""
+    src = Path(__file__).resolve().parents[1] / "src" / "tray4hermes"
+    offenders: list[str] = []
+    for path in src.glob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not node.args:
+                continue
+            if not isinstance(node.func, ast.Name) or node.func.id != "_":
+                continue
+            arg = node.args[0]
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                if any(ch in arg.value for ch in "áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ"):
+                    offenders.append(f"{path.name}:{node.lineno}: {arg.value!r}")
+    assert offenders == []
 
 
 def test_no_translation_regression_against_growing_source() -> None:

@@ -143,6 +143,19 @@ def available_languages() -> list[str]:
     return out
 
 
+_LANGUAGE_NAMES = {
+    "en": "English",
+    "cs": "Čeština",
+}
+
+
+def language_display_name(language: str | None) -> str:
+    """Return a human-readable native name for a language picker."""
+    if language is None:
+        return _("System (follow locale)")
+    return _LANGUAGE_NAMES.get(language, language)
+
+
 def install(language: str | None = None) -> None:
     """Bind the appropriate gettext translation as ``builtins._``.
 
@@ -276,7 +289,7 @@ def _resolve_from_env() -> list[str]:
     return out
 
 
-def switch_language(language: str) -> None:
+def switch_language(language: str | None) -> None:
     """Rebind ``builtins._`` to a different language at runtime.
 
     Used by the settings dialog when the user picks a new

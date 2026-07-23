@@ -8,6 +8,7 @@ that can be smoke-tested in offscreen mode.
 
 from __future__ import annotations
 
+import os
 import signal
 import subprocess
 import sys
@@ -181,6 +182,17 @@ class HermesTray:
 
         return menu
 
+    def _retranslate_ui(self) -> None:
+        """Rebuild the tray menu after changing the gettext language."""
+        old_menu = self._menu
+        self._profile_group = QActionGroup(self.app)
+        self._profile_group.setExclusive(True)
+        self._menu = self._build_menu()
+        self._tray.setContextMenu(self._menu)
+        old_menu.deleteLater()
+        self._current_code = None
+        self._refresh()
+
     def _rebuild_profile_menu(self) -> None:
         """(Re)populate the profile submenu with a checked radio for the saved choice."""
         self._profile_menu.clear()
@@ -203,8 +215,8 @@ class HermesTray:
             None,
             _("Change profile?"),
             _(
-                "Restartovat gateway s profilem '{name}'?\n\n"
-                "Aktuální session v Discordu/Hermes Desktopu se může krátce odpojit."
+                "Restart gateway with profile '{name}'?\n\n"
+                "Current session in Discord/Hermes Desktop may briefly disconnect."
             ).format(name=name),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.Yes,
@@ -218,8 +230,8 @@ class HermesTray:
                 None,
                 _("Error"),
                 _(
-                    "Nelze nastavit profil '{name}':\n\n{out_msg}\n\n"
-                    "Profil musí existovat v {profiles_dir}/."
+                    "Cannot set profile '{name}':\n\n{out_msg}\n\n"
+                    "Profile must exist in {profiles_dir}/."
                 ).format(
                     name=name,
                     out_msg=out or _("(no output)"),
@@ -262,18 +274,18 @@ class HermesTray:
         )
 
         current = load_tray_settings()
-        dlg = TraySettingsDialog(current, self)
+        dlg = TraySettingsDialog(current)
         if dlg.exec_() == QDialog.Accepted:
             new_settings = dlg.result_settings()
             save_tray_settings(new_settings)
-            # If language changed, switch the gettext binding.
-            # Existing widget strings stay in the old language
-            # until the tray is rebuilt (restart).
+            # Apply the language immediately. ``None`` deliberately means
+            # "follow the OS locale"; it must not be coerced to English.
             if new_settings.language != current.language:
                 try:
                     from tray4hermes.i18n import switch_language
 
-                    switch_language(new_settings.language or "en")
+                    switch_language(new_settings.language)
+                    self._retranslate_ui()
                 except Exception as e:  # noqa: BLE001
                     import sys as _sys
 
@@ -372,11 +384,11 @@ class HermesTray:
             f"tray4hermes v{__version__}",
             _(
                 "<b>tray4hermes v{version}</b><br><br>"
-                "Pasivní observer pro Hermes Gateway.<br><br>"
-                "<b>Čte:</b> ~/.hermes/{{gateway_state.json, profiles/, config.yaml, "
+                "Passive observer for Hermes Gateway.<br><br>"
+                "<b>Reads:</b> ~/.hermes/{{gateway_state.json, profiles/, config.yaml, "
                 "logs/gateway.log}}<br>"
-                "<b>Píše:</b> ~/.config/tray4hermes/state.json<br>"
-                "<b>Ovládá:</b> systemctl --user ({service})<br><br>"
+                "<b>Writes:</b> ~/.config/tray4hermes/state.json<br>"
+                "<b>Controls:</b> systemctl --user ({service})<br><br>"
                 "Hermes Agent: github.com/NousResearch/hermes-agent"
             ).format(
                 version=__version__,
@@ -427,7 +439,3 @@ class HermesTray:
         rc = self.app.exec_()
         self._cleanup()
         return rc or 0
-
-
-# Late import to keep all `os` references in one place; also helps tests.
-import os  # noqa: E402

@@ -107,6 +107,66 @@ class TestHermesTrayConstruction:
         finally:
             tray._quit()
 
+    def test_retranslate_rebuilds_visible_menu(self, hermes_home, qtbot) -> None:
+        from tray4hermes import i18n
+        from tray4hermes.app import HermesTray
+
+        i18n.install("en")
+        tray = HermesTray()
+        try:
+            assert tray._tray_settings_action.text() == "⚙  tray4hermes Settings"
+            i18n.install("cs")
+            tray._retranslate_ui()
+            assert tray._tray_settings_action.text() == "⚙  Nastavení tray4hermes"
+        finally:
+            i18n.install("en")
+            tray._quit()
+
+    def test_open_settings_uses_valid_qt_parent(self, hermes_home, monkeypatch) -> None:
+        from PyQt5.QtWidgets import QDialog
+
+        from tray4hermes.app import HermesTray
+
+        monkeypatch.setattr(
+            "tray4hermes.tray_settings.TraySettingsDialog.exec_",
+            lambda self: QDialog.Rejected,
+        )
+        tray = HermesTray()
+        try:
+            tray._open_tray_settings()
+        finally:
+            tray._quit()
+
+    def test_settings_language_change_persists_and_retranslates(
+        self, hermes_home, qtbot, monkeypatch
+    ) -> None:
+        from PyQt5.QtWidgets import QDialog
+
+        from tray4hermes import i18n
+        from tray4hermes.app import HermesTray
+        from tray4hermes.tray_settings import TraySettings, load_tray_settings
+
+        class AcceptedCzechDialog:
+            def __init__(self, current, parent=None) -> None:
+                pass
+
+            def exec_(self) -> int:
+                return QDialog.Accepted
+
+            def result_settings(self) -> TraySettings:
+                return TraySettings(language="cs")
+
+        monkeypatch.setattr("tray4hermes.tray_settings.TraySettingsDialog", AcceptedCzechDialog)
+        i18n.install("en")
+        tray = HermesTray()
+        try:
+            tray._open_tray_settings()
+            assert load_tray_settings().language == "cs"
+            assert tray._tray_settings_action.text() == "⚙  Nastavení tray4hermes"
+        finally:
+            i18n.install("en")
+            tray._quit()
+
 
 class TestLogDialog:
     def test_dialog_construction_with_missing_log(self, hermes_home, qtbot) -> None:

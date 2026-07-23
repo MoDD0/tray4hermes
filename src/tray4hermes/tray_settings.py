@@ -202,22 +202,17 @@ class TraySettingsDialog(QDialog):
         # The first entry is always "System (follow locale)"; then
         # English (canonical source); then every compiled .mo.
         self._lang_keys: list[str | None] = [None]
-        self._language.addItem(_("System (follow locale)"))
+        from tray4hermes.i18n import available_languages, language_display_name
+
+        self._language.addItem(language_display_name(None))
         # English is always available (it's the source language).
         self._lang_keys.append("en")
-        self._language.addItem("English")
-        try:
-            from tray4hermes.i18n import available_languages
-
-            for lang_code in available_languages():
-                if lang_code == "en":
-                    continue
-                self._lang_keys.append(lang_code)
-                self._language.addItem(lang_code)
-        except Exception as e:  # noqa: BLE001
-            import sys as _sys
-
-            print(f"[tray4hermes] language list unavailable: {e}", file=_sys.stderr)
+        self._language.addItem(language_display_name("en"))
+        for lang_code in available_languages():
+            if lang_code == "en":
+                continue
+            self._lang_keys.append(lang_code)
+            self._language.addItem(language_display_name(lang_code))
 
         # Select current
         if current.language is None:
@@ -230,7 +225,7 @@ class TraySettingsDialog(QDialog):
         row.addWidget(self._language)
         layout.addLayout(row)
 
-        hint = QLabel(_("ℹ Language change takes effect after restarting tray4hermes."))
+        hint = QLabel(_("ℹ Language change is applied after saving."))
         hint.setWordWrap(True)
         hint.setStyleSheet("color: gray; font-size: 9pt;")
         layout.addWidget(hint)
@@ -262,7 +257,7 @@ class TraySettingsDialog(QDialog):
         # Default levels
         layout.addWidget(QLabel(_("Default visible levels:")))
         self._level_checks: dict[str, QCheckBox] = {}
-        for level in ("ERROR", "WARNING", "INFO", "DEBUG", "TRACE"):
+        for level in ("ERROR", "WARNING", "INFO", "DEBUG", "CRITICAL", "TRACE"):
             cb = QCheckBox(level)
             cb.setChecked(level in current.default_show_levels)
             cb.setStyleSheet(f"QCheckBox {{ color: {LEVEL_COLORS[level].name()}; }}")
