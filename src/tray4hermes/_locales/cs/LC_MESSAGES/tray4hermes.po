@@ -181,6 +181,9 @@ msgstr "Zobrazit pouze řádky z posledních X minut (0 = vše)."
 msgid "ℹ Language change takes effect after restarting tray4hermes."
 msgstr "ℹ Změna jazyka se projeví po restartu tray4hermes."
 
+msgid "ℹ Language change is applied after saving."
+msgstr "ℹ Změna jazyka se použije po uložení."
+
 msgid "0 = unlimited (all lines). At higher values, older lines are gradually removed."
 msgstr "0 = bez limitu (všechny řádky). Při vyšších hodnotách se starší řádky postupně odstraňují."
 

@@ -16,6 +16,7 @@ def _isolate_hermes_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     (fake_hermes / "logs").mkdir()
     (fake_hermes / "profiles").mkdir()
     monkeypatch.setenv("HERMES_HOME", str(fake_hermes))
+    monkeypatch.setenv("TRAY4HERMES_HOME", str(fake_hermes))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
     monkeypatch.setenv("TRAY4HERMES_LOCK", str(tmp_path / "tray.lock"))
 
@@ -23,7 +24,7 @@ def _isolate_hermes_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 @pytest.fixture
 def hermes_home() -> Path:
     """The (now isolated) ~/.hermes directory."""
-    return Path(os.environ["HERMES_HOME"])
+    return Path(os.environ["TRAY4HERMES_HOME"])
 
 
 @pytest.fixture

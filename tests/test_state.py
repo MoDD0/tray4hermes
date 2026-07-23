@@ -24,6 +24,24 @@ from tray4hermes.state import (
 )
 
 
+def test_default_paths_ignore_inherited_profile_home(monkeypatch, tmp_path: Path) -> None:
+    """The desktop tray monitors the canonical ~/.hermes gateway by default."""
+    from tray4hermes import paths
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes" / "profiles" / "work"))
+    monkeypatch.delenv("TRAY4HERMES_HOME", raising=False)
+    assert paths.hermes_home() == tmp_path / ".hermes"
+
+
+def test_explicit_tray_hermes_home_override_wins(monkeypatch, tmp_path: Path) -> None:
+    from tray4hermes import paths
+
+    target = tmp_path / "custom-hermes"
+    monkeypatch.setenv("TRAY4HERMES_HOME", str(target))
+    assert paths.hermes_home() == target
+
+
 # ── Dataclass invariants ────────────────────────────────────────────────────
 class TestGatewayState:
     def test_construction_with_unknown_code_rejected(self) -> None:

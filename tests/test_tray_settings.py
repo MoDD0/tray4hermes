@@ -145,3 +145,51 @@ def test_dialog_language_system_default(hermes_home: Path, qtbot) -> None:
     qtbot.addWidget(dlg)
     assert dlg._language.currentIndex() == 0
     assert dlg._lang_keys[0] is None
+
+
+def test_log_settings_use_tray_defaults_on_first_open(hermes_home: Path) -> None:
+    from tray4hermes.logs_view import _load_log_settings
+
+    save_tray_settings(
+        TraySettings(
+            default_max_lines=750,
+            default_show_levels=("ERROR", "WARNING"),
+            default_auto_scroll=False,
+            default_word_wrap=True,
+        )
+    )
+    settings = _load_log_settings()
+    assert settings.max_lines == 750
+    assert settings.show_levels == ("ERROR", "WARNING")
+    assert settings.auto_scroll is False
+    assert settings.word_wrap is True
+
+
+def test_log_settings_use_tray_defaults_when_state_file_is_missing(
+    hermes_home: Path, monkeypatch
+) -> None:
+    from tray4hermes.logs_view import _load_log_settings
+
+    monkeypatch.setattr(
+        "tray4hermes.tray_settings.load_tray_settings",
+        lambda: TraySettings(
+            default_max_lines=1250,
+            default_show_levels=("INFO",),
+            default_auto_scroll=False,
+            default_word_wrap=True,
+        ),
+    )
+    settings = _load_log_settings()
+    assert settings.max_lines == 1250
+    assert settings.show_levels == ("INFO",)
+    assert settings.auto_scroll is False
+    assert settings.word_wrap is True
+
+
+def test_dialog_uses_human_readable_language_names(hermes_home: Path, qtbot) -> None:
+    dlg = TraySettingsDialog(TraySettings(language="cs"))
+    qtbot.addWidget(dlg)
+    labels = [dlg._language.itemText(i) for i in range(dlg._language.count())]
+    assert "English" in labels
+    assert "Čeština" in labels
+    assert "cs" not in labels
