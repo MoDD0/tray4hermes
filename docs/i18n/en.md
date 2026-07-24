@@ -39,7 +39,7 @@ tray interface for monitoring and controlling it. The application:
 
 ## Features
 
-![KDE Plasma tray with tray4hermes icon](docs/images/kde_tray.png)
+![KDE Plasma tray with tray4hermes icon](docs/images/preview.png)
 
 *Above: a real KDE Plasma 5 tray, the tray4hermes icon slots in next
 to your other SNI apps. Screenshot from a Manjaro KDE session where

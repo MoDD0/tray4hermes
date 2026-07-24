@@ -77,6 +77,7 @@ _README_TARGETS: dict[str, str] = {
 _IMAGE_LOCATIONS: tuple[tuple[str, str], ...] = (
     ("docs/images/kde_tray.png", "KDE Plasma tray screenshot"),
     ("docs/images/log_viewer.png", "log viewer screenshot"),
+    ("docs/images/preview.png", "combined tray/preview screenshot"),
     ("docs/images/tray4hermes.png", "package logo"),
 )
 
