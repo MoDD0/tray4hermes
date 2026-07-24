@@ -1,3 +1,9 @@
+# ── Pozůstalostní archiv ────────────────────────────────────────────────────
+# Kompletní strom z éry vývoje s MiniMax-M3, odložený stranou 2026-07-24.
+# Zůstává lokálně (a tím v Nextcloud záloze), ale nepatří do repozitáře —
+# git historie je úplný archiv sama o sobě, viz tag `m3-final`.
+/archive-M3-minimax-work/
+
 # Python build / cache
 __pycache__/
 *.py[cod]
@@ -30,6 +36,9 @@ coverage.xml
 .idea/
 .vscode/
 *.iml
+
+# Claude Code — lokální nastavení sezení (projektová paměť se verzuje)
+.claude/settings.local.json
 
 # ── Secrets — never commit, even by accident ────────────────────────────────
 # Belt-and-suspenders. tray4hermes itself writes only to
