@@ -839,7 +839,17 @@ class LogDialog(QDialog):
         # otherwise fill the buffer.
         lines = [line for line in lines if _keep(line)] if lines else lines
 
-        # 3) Reverse order — "newest at top" instead of the default
+        # 3) Trim buffer in normal-order space before we optionally
+        #    reverse. In default mode (newest at bottom), the trailing
+        #    slice keeps the newest lines. In reverse mode (newest at
+        #    top) the leading slice after reversal keeps the newest
+        #    lines too. Either way, this bounds the buffer BEFORE the
+        #    reversal so setMaximumBlockCount does not trim from the
+        #    wrong end in reverse mode (where "top" is the live edge).
+        if self._settings.max_lines > 0 and len(lines) > self._settings.max_lines:
+            lines = lines[-self._settings.max_lines :]
+
+        # 4) Reverse order — "newest at top" instead of the default
         #    "newest at bottom" (tail -f style).
         if self._settings.reverse_order:
             lines = list(reversed(lines))

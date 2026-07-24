@@ -424,3 +424,27 @@ class TestLogDialog:
         assert "line 49" in dlg._editor.toPlainText()
         # Oldest content is dropped
         assert "line 0" not in dlg._editor.toPlainText()
+
+    def test_max_lines_buffer_limit_in_reverse(self, hermes_home, qtbot) -> None:
+        # In reverse mode, the rolling buffer must keep the *newest* lines
+        # (the live edge is at the top), not the oldest. With 50 lines
+        # and max_lines=10, the displayed buffer should be the last 10
+        # lines of the file, i.e. line 40..49 with lines 40-49 at top.
+        from tray4hermes.logs_view import LogDialog, LogSettings
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("\n".join(f"2026-07-22 10:00:{i:02d} INFO line {i}" for i in range(50)))
+        dlg = LogDialog()
+        dlg._settings = LogSettings(max_lines=10, reverse_order=True)
+        dlg._apply_settings()
+        dlg._refresh()
+        lines = dlg._editor.toPlainText().splitlines()
+        # 10 newest lines (line 40..49)
+        assert lines[0].endswith("line 49"), f"reverse buffer kept wrong line at top: {lines[0]!r}"
+        assert lines[-1].endswith("line 40"), (
+            f"reverse buffer kept wrong line at bottom: {lines[-1]!r}"
+        )
+        # Oldest lines must be dropped
+        assert "line 0" not in dlg._editor.toPlainText()
+        assert "line 39" not in dlg._editor.toPlainText()
