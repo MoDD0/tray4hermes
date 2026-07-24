@@ -10,6 +10,9 @@
 <!-- Available languages: en → English, cs → Čeština -->
 <!-- i18n:available-languages:END -->
 
+![KDE Plasma tray with tray4hermes icon](docs/images/preview.png)
+
+
 > **Canonical:** English (this file)
 >
 > **Other languages:** [Čeština](docs/README.cs.md)
@@ -45,8 +48,6 @@ tray interface for monitoring and controlling it. The application:
 ---
 
 ## Features
-
-![KDE Plasma tray with tray4hermes icon](docs/images/kde_tray.png)
 
 *Above: a real KDE Plasma 5 tray, the tray4hermes icon slots in next
 to your other SNI apps. Screenshot from a Manjaro KDE session where
@@ -85,11 +86,6 @@ The log viewer reads `~/.hermes/logs/gateway.log` and provides:
 - **Settings dialog** (font size, max lines, per-level visibility, …)
 - **Persisted** — all settings are saved to
   `~/.config/tray4hermes/state.json`
-
-![Log viewer demo](docs/images/log_viewer.png)
-
-The screenshot shows colored levels, line numbers and the status bar. The
-application supports English and Czech UI text.
 
 ---
 
@@ -446,36 +442,13 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-## Hosting & mirror
+## Hosting
 
 **Primary host: GitHub** → https://github.com/MoDD0/tray4hermes
 
 - All development, issues, pull requests, releases, and CI happen there.
 - This is where contributors fork from and push branches to.
 - Releases are tagged here first; everything else cascades from here.
-
-**Read-only mirror: Forgejo** → https://forgejo.he1.co/HERMbuddy/tray4hermes
-
-- Maintained by the project owner as a backup / self-host reference.
-- **Not** accepting issues or PRs (it would create double-tracking
-  pain). Open your issues on GitHub.
-- Synced manually with `git push --mirror forgejo main` whenever the
-  GitHub main branch moves. Expect up to a few hours of lag.
-
-If you fork and your fork ends up talking to Forgejo only — that's a
-fork of a mirror, which works for read-only inspection but **don't open
-PRs against it**: they'll be ignored. Always target the GitHub repo.
-
-Why mirror at all? Two reasons, philosophical:
-
-1. **Self-host reference.** When the project was first sketched, it
-   lived on Forgejo. Keeping a mirror there shows the code's lineage
-   and keeps the project's history visible on at least one
-   non-commercial forge.
-2. **Distributed risk.** If GitHub has another 2024-style incident,
-   the project still has a live copy somewhere else. Both have the
-   same authoritative commit history; either can be promoted to
-   primary if needed.
 
 ---
 
