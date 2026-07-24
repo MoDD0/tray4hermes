@@ -1,4 +1,6 @@
-# tray4hermes  <img src="https://img.shields.io/badge/version-2.0.5-blue" alt="version 2.0.5">
+# tray4hermes  
+
+[![version: 2.0.5](https://img.shields.io/badge/version-2.0.5-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
