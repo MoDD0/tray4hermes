@@ -4,9 +4,9 @@
 
 Use Semantic Versioning with Conventional Commits for every completed work unit:
 
-- `fix:` or `perf:` → PATCH (`2.0.0` → `2.0.1`)
-- `feat:` → MINOR (`2.0.1` → `2.1.0`)
-- `type!:` or a `BREAKING CHANGE:` footer → MAJOR (`2.1.0` → `3.0.0`)
+- `fix:` or `perf:` → PATCH
+- `feat:` → MINOR
+- `type!:` or a `BREAKING CHANGE:` footer → MAJOR
 - `docs:`, `test:`, `chore:`, `refactor:` without a breaking change → no bump
 
 The installed `prepare-commit-msg` hook derives the required bump and rejects

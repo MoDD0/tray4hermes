@@ -53,3 +53,7 @@ secrets.yaml
 
 # Stale archive directories (created by .archive/ during rebase / refactor)
 .archive/
+
+# Scratch directory for local ad-hoc image assets; the README
+# screenshots live under docs/images/ and are version-controlled.
+/images/

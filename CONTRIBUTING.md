@@ -178,12 +178,12 @@ tray4hermes follows **Semantic Versioning** and Conventional Commits. Every
 completed user-visible work unit that is committed must include its version
 bump in the same commit:
 
-| Change | Commit type | Version bump | Example from `2.0.0` |
-|---|---|---|---|
-| Backwards-compatible bug fix or promised correction | `fix:` / `perf:` | PATCH | `2.0.1` |
-| Backwards-compatible new capability | `feat:` | MINOR | `2.1.0` |
-| Breaking API/config/behavior change | `type!:` or `BREAKING CHANGE:` | MAJOR | `3.0.0` |
-| Docs/tests/chore only | `docs:` / `test:` / `chore:` | none | unchanged |
+| Change | Commit type | Version bump |
+|---|---|---|
+| Backwards-compatible bug fix or promised correction | `fix:` / `perf:` | PATCH |
+| Backwards-compatible new capability | `feat:` | MINOR |
+| Breaking API/config/behavior change | `type!:` or `BREAKING CHANGE:` | MAJOR |
+| Documentation, tests, or chore only | `docs:` / `test:` / `chore:` | none |
 
 Before committing completed work:
 
