@@ -7,7 +7,6 @@ normal `pytest` invocation picks up:
   byte-identical output),
 - the parity lint passes (heading counts roughly equal across
   translations),
-- the build script's --check flag reports the project is current,
 - every registered locale has a source file, a compile target,
   and a non-empty body.
 
@@ -15,13 +14,21 @@ Why both a script and a pytest: the script is the entry point
 that contributors run when adding/changing translations; the
 pytest is what CI runs in the regular test suite. Both should
 agree.
+
+Whether the *committed* READMEs are current is a separate question,
+and it lives in ``test_readme_freshness.py`` — it has to be asked
+before anything here runs a build. Builds in this file therefore
+happen in a throwaway copy of the repo (the ``repo_copy`` fixture),
+never in the working tree.
 """
 
 from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -85,9 +92,11 @@ def _run_script(repo_root: Path, *args: str) -> subprocess.CompletedProcess:
 
     `subprocess` is safe here — args[0] is a hard-coded filename
     from the repo, and the rest is the caller's choice but we
-    only ever invoke our own scripts.
+    only ever invoke our own scripts. `sys.executable` keeps the
+    run inside the same interpreter pytest is using rather than
+    whatever `python` happens to be first on PATH.
     """
-    cmd = ["python", str(repo_root / "scripts" / args[0])] + list(args[1:])
+    cmd = [sys.executable, str(repo_root / "scripts" / args[0])] + list(args[1:])
     return subprocess.run(  # noqa: S603 (script paths are repo-controlled)
         cmd,
         cwd=repo_root,
@@ -97,35 +106,41 @@ def _run_script(repo_root: Path, *args: str) -> subprocess.CompletedProcess:
     )
 
 
-def test_i18n_build_idempotent(repo_root: Path) -> None:
-    """Running `python scripts/i18n_build.py` twice produces the same files."""
-    first = _run_script(repo_root, "i18n_build.py")
+def test_i18n_build_idempotent(repo_copy: Path, i18n_build: ModuleType) -> None:
+    """Running `python scripts/i18n_build.py` twice produces the same files.
+
+    Runs in a copy: this is the one test here that legitimately needs a
+    *writing* build, and the working tree is not the place for it.
+
+    Idempotence is asserted on the file contents, not on the absence of
+    a "wrote:" line in stderr — a build that rewrote a file with the
+    same bytes would be quiet in the log and still idempotent, while one
+    that silently changed a byte without logging would slip past a
+    log-only check.
+    """
+    targets = [repo_copy / rel for rel in i18n_build._README_TARGETS.values()]
+
+    first = _run_script(repo_copy, "i18n_build.py")
     assert first.returncode == 0, (
         f"first run failed:\nSTDOUT:\n{first.stdout}\nSTDERR:\n{first.stderr}"
     )
+    after_first = {t.name: t.read_text(encoding="utf-8") for t in targets}
 
-    second = _run_script(repo_root, "i18n_build.py")
+    second = _run_script(repo_copy, "i18n_build.py")
     assert second.returncode == 0, (
         f"second run failed:\nSTDOUT:\n{second.stdout}\nSTDERR:\n{second.stderr}"
     )
+    after_second = {t.name: t.read_text(encoding="utf-8") for t in targets}
 
-    # Idempotence = same outputs across runs.
-    # The script prints 'wrote: <path>' lines on writes; the second
-    # run should print nothing.
+    changed = sorted(name for name in after_first if after_first[name] != after_second[name])
+    assert changed == [], f"build is not idempotent; rebuilt output differs for: {changed}"
+
+    # A settled build also has nothing left to write, so the second run
+    # should stay silent. Weaker than the content check above, but it is
+    # what `--check` keys off, so a regression here matters too.
     assert "wrote" not in second.stdout + second.stderr, (
-        f"second run produced output (build is not idempotent):\n"
+        f"second run rewrote a file it did not need to:\n"
         f"STDOUT:\n{second.stdout}\nSTDERR:\n{second.stderr}"
-    )
-
-
-def test_i18n_build_check_succeeds(repo_root: Path) -> None:
-    """--check should report OK (exit 0) when READMEs are in sync."""
-    # Make sure source and outputs are in sync first.
-    _run_script(repo_root, "i18n_build.py")
-    result = _run_script(repo_root, "i18n_build.py", "--check")
-    assert result.returncode == 0, (
-        f"--check should pass. Re-run the script to update outputs.\n"
-        f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
     )
 
 
@@ -137,33 +152,26 @@ def test_i18n_lint_passes(repo_root: Path) -> None:
     )
 
 
-def test_compiled_readmes_match_sources(repo_root: Path) -> None:
+def test_compiled_readmes_match_sources(repo_root: Path, i18n_build: ModuleType) -> None:
     """Every compiled output in i18n_build.py maps back to a source
     file, and every translation has a matching source. This catches
     accidental removals or rename drift."""
-    sys_path = repo_root / "src"
-    import sys as _sys
-
-    # Inject src/ so we can import the build module (it's not part
-    # of the installable package; it's a repo-internal script).
-    _sys.path.insert(0, str(sys_path))
-    _sys.path.insert(0, str(repo_root / "scripts"))
-    # The import below requires the script to be importable as a
-    # module; we add its directory to sys.path above.
-    # Use importlib to tolerate the .py extension.
-    import importlib
-
-    i18n_build = importlib.import_module("i18n_build")
     locales = i18n_build.load_locales(repo_root)
 
     # Locales resolved must include 'en' (canonical).
     codes = [loc.code for loc in locales]
     assert "en" in codes, f"canonical 'en' locale not registered. Locales: {codes}"
 
-    # Every registered locale must point at a real file and a real
-    # writable target.
     for loc in locales:
         assert loc.source.is_file(), f"locale {loc.code} source file missing: {loc.source}"
-        # Target might not exist yet (first build) — that's OK.
-        # After a successful build, the parent directory must exist.
-        loc.target.parent.mkdir(parents=True, exist_ok=True)
+        # The target itself is generated, so it may legitimately be
+        # absent before the first build — but the directory it lands in
+        # has to be part of the repo already. Creating it here instead
+        # of asserting would hide a typo in _README_TARGETS behind a
+        # stray directory in the working tree.
+        assert loc.target.parent.is_dir(), (
+            f"locale {loc.code} targets {loc.target}, whose directory does not exist"
+        )
+        assert loc.source.read_text(encoding="utf-8").strip(), (
+            f"locale {loc.code} source {loc.source.name} is empty"
+        )
