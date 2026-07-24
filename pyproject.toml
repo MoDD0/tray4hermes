@@ -13,7 +13,7 @@ name = "tray4hermes"
 # Dynamic version: read from src/tray4hermes/__init__.py via
 # [tool.setuptools.dynamic]. Single source of truth for the version.
 dynamic = ["version"]
-description = "Passive KDE/Plasma tray monitor for Hermes Gateway (Nous Research Hermes Agent)"
+description = "KDE/Plasma tray monitor and controller for Hermes Gateway (Nous Research Hermes Agent)"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [

@@ -1,6 +1,4 @@
-# tray4hermes (česky)
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+# tray4hermes (česky) <!-- tray4hermes:version -->[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
@@ -41,7 +39,7 @@ tray rozhraní pro její monitoring a ovládání. Aplikace:
 
 ## Features
 
-![KDE Plasma tray s tray4hermes ikonkou](../images/kde_tray.png)
+![KDE Plasma tray s tray4hermes ikonkou](docs/images/kde_tray.png)
 
 *Výše: reálná KDE Plasma 5 lišta; tray4hermes ikona se objeví vedle
 tvých dalších SNI aplikací. Screenshot z Manjaro KDE session.*
@@ -79,7 +77,7 @@ Log viewer čte `~/.hermes/logs/gateway.log` a nabízí:
 - **Persisted** — všechna nastavení se ukládají do
   `~/.config/tray4hermes/state.json`
 
-![Log viewer demo](images/log_viewer.png)
+![Log viewer demo](docs/images/log_viewer.png)
 
 Screenshot ukazuje barevné levely, čísla řádků a status bar. Aplikace
 podporuje anglické a české UI.
