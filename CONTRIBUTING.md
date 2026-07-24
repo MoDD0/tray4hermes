@@ -180,10 +180,15 @@ bump in the same commit:
 
 | Change | Commit type | Version bump |
 |---|---|---|
-| Backwards-compatible bug fix or promised correction | `fix:` / `perf:` | PATCH |
-| Backwards-compatible new capability | `feat:` | MINOR |
-| Breaking API/config/behavior change | `type!:` or `BREAKING CHANGE:` | MAJOR |
+| Backwards-compatible bug fix or polish | `fix:` / `perf:` | PATCH (third slot) |
+| Backwards-compatible new capability | `feat:` | MINOR (second slot, patch resets to 0) |
+| Breaking change (drop Python, switch to Qt6, …) | `feat!:` / `BREAKING CHANGE:` | MAJOR (first slot, lower slots reset) |
 | Documentation, tests, or chore only | `docs:` / `test:` / `chore:` | none |
+
+Every slot is **unbounded** — `2.0.99 + fix = 2.0.100`, not `2.1.0`.
+The `feat:` slot is the most common place to land a release milestone;
+use `fix:` for one-off polish. Reaching `3.0.0` should be a deliberate
+act (e.g. switching to Plasma 6 / Qt6), not a surprise.
 
 Before committing completed work:
 

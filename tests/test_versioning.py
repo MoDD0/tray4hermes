@@ -40,6 +40,13 @@ def test_classify_bump(versioning_module, message: str, expected: str | None) ->
         ("2.0.0", "patch", "2.0.1"),
         ("2.0.1", "minor", "2.1.0"),
         ("2.1.7", "major", "3.0.0"),
+        # Patch slot is unbounded: 2.0.99 + patch = 2.0.100, not 2.1.0.
+        # Only `feat` and `feat!` move into the second/first slot.
+        ("2.0.99", "patch", "2.0.100"),
+        ("2.0.100", "patch", "2.0.101"),
+        ("2.0.99", "minor", "2.1.0"),
+        ("2.99.99", "minor", "2.100.0"),
+        ("1.999.99", "major", "2.0.0"),
     ],
 )
 def test_bump_version(versioning_module, version: str, level: str, expected: str) -> None:

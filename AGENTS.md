@@ -4,10 +4,17 @@
 
 Use Semantic Versioning with Conventional Commits for every completed work unit:
 
-- `fix:` or `perf:` → PATCH
-- `feat:` → MINOR
-- `type!:` or a `BREAKING CHANGE:` footer → MAJOR
+- `fix:` or `perf:` → PATCH (third slot, e.g. `2.0.5` → `2.0.6`)
+- `feat:` → MINOR (second slot, patch resets, e.g. `2.0.6` → `2.1.0`)
+- `feat!:` or a `BREAKING CHANGE:` footer → MAJOR (first slot, lower slots reset)
 - `docs:`, `test:`, `chore:`, `refactor:` without a breaking change → no bump
+
+Every slot is **unbounded** (`2.0.99 + fix = 2.0.100`, not `2.1.0`). The
+`feat:` slot is the most common place to land a release milestone, so
+think twice before using `feat:` for a one-off polish — that's `fix:`.
+Likewise a `feat!` is a major redesign (e.g. dropping Python 3.11
+support, switching to Plasma 6 / Qt6); reaching `3.0.0` should be a
+deliberate act, not a surprise.
 
 The installed `prepare-commit-msg` hook derives the required bump and rejects
 a missing or wrong version. Before committing, run:
