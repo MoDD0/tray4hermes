@@ -15,6 +15,8 @@ Public surface:
 from __future__ import annotations
 
 import re
+from base64 import b64decode as _b64decode
+from base64 import b64encode as _b64encode
 from dataclasses import dataclass
 from dataclasses import replace as dc_replace
 from datetime import datetime, timedelta
@@ -88,6 +90,10 @@ class LogSettings:
     time_window_minutes: int = 0  # 0 = show everything
     reverse_order: bool = False  # False = newest at bottom (tail -f style)
 
+    # Encoded QDialog.saveGeometry() blob (base64). ``None`` = first open,
+    # fall back to the dialog's default size.
+    window_geometry: bytes | None = None
+
     def to_json(self) -> dict[str, object]:
         return {
             "max_lines": self.max_lines,
@@ -98,6 +104,13 @@ class LogSettings:
             "show_tracebacks": self.show_tracebacks,
             "time_window_minutes": self.time_window_minutes,
             "reverse_order": self.reverse_order,
+            # base64-encode so the JSON stays text-only and stays valid
+            # even if the binary blob contains bytes outside 0x20..0x7e.
+            "window_geometry": (
+                _b64encode(self.window_geometry).decode("ascii")
+                if self.window_geometry is not None
+                else None
+            ),
         }
 
     @classmethod
@@ -114,6 +127,11 @@ class LogSettings:
             show_tracebacks=bool(data.get("show_tracebacks", True)),
             time_window_minutes=int(data.get("time_window_minutes", 0)),
             reverse_order=bool(data.get("reverse_order", False)),
+            window_geometry=(
+                _b64decode(data["window_geometry"])
+                if isinstance(data.get("window_geometry"), str)
+                else None
+            ),
         )
 
     @classmethod
@@ -593,9 +611,15 @@ class LogDialog(QDialog):
         from tray4hermes.icons import brand_icon
 
         self.setWindowIcon(brand_icon())
-        self.resize(900, 500)
-
+        # Load settings first so we can restore the last-used geometry
+        # before the default resize() triggers an unnecessary layout pass.
         self._settings = _load_log_settings()
+        self.resize(900, 500)
+        # Restore the last-used window geometry, if any. ``restoreGeometry``
+        # returns False on the first run or after a Qt version mismatch
+        # — both are silent failures, the default size stays.
+        if self._settings.window_geometry is not None:
+            self.restoreGeometry(self._settings.window_geometry)
 
         # Layout: [toolbar] [editor + gutter] [statusbar]
         self._build_editor()  # must be before _build_toolbar (which references self._editor)
@@ -1001,6 +1025,13 @@ class LogDialog(QDialog):
 
         _save_log_settings(self._settings)
         self._refresh()
+
+    def closeEvent(self, event) -> None:  # noqa: N802 (Qt naming)
+        """Persist the user's window size + position so the next open
+        restores the same layout."""
+        self._settings = dc_replace(self._settings, window_geometry=bytes(self.saveGeometry()))
+        _save_log_settings(self._settings)
+        super().closeEvent(event)
 
     # Esc closes dialog (override default reject)
     def keyPressEvent(self, event) -> None:  # noqa: N802

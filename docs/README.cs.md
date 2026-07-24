@@ -1,4 +1,4 @@
-# tray4hermes (česky)  <img src="https://img.shields.io/badge/version-2.0.9-blue" alt="version 2.0.9">[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+# tray4hermes (česky)  <img src="https://img.shields.io/badge/version-2.0.10-blue" alt="version 2.0.10">[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
@@ -78,6 +78,7 @@ Log viewer čte `~/.hermes/logs/gateway.log` a nabízí:
 - **Word-wrap toggle**
 - **Copy / Clear / Refresh** akce
 - **Settings dialog** (font size, max lines, per-level visibility, …)
+- **Pamatuje si velikost a pozici okna** mezi otevřeními
 - **Persisted** — všechna nastavení se ukládají do
   `~/.config/tray4hermes/state.json`
 

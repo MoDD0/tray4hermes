@@ -504,3 +504,34 @@ class TestLogDialog:
             # a future refactor that accidentally inlines a different
             # pixmap fails this test).
             assert dlg.windowIcon().availableSizes() == expected.availableSizes()
+
+    def test_log_dialog_persists_geometry_across_reopens(self, hermes_home, qtbot) -> None:
+        """When the user resizes the log viewer and closes it, the next
+        open must restore the same size. Prevents the annoying default
+        900×500 reset every time the user picks a custom size."""
+        from tray4hermes.logs_view import LogDialog
+
+        log = hermes_home / "logs" / "gateway.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("2026-07-22 10:00:00 INFO hello\n")
+
+        # First open: user resizes to 1100×700 and closes it.
+        dlg = LogDialog()
+        dlg.resize(1100, 700)
+        dlg.show()
+        qtbot.wait(50)
+        # Trigger closeEvent: ``accept`` simulates the user clicking
+        # the X / Close button. ``accept`` itself does NOT call
+        # ``closeEvent``; we do that by ``close()``.
+        dlg.close()
+        # closeEvent must have persisted the new geometry to state.json.
+        from tray4hermes.logs_view import _load_log_settings
+
+        persisted = _load_log_settings()
+        assert persisted.window_geometry, "closeEvent did not save geometry"
+
+        # Second open: must restore the new size.
+        dlg2 = LogDialog()
+        size = dlg2.size()
+        assert size.width() == 1100, f"expected width=1100, got {size.width()}"
+        assert size.height() == 700, f"expected height=700, got {size.height()}"

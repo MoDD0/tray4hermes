@@ -76,6 +76,7 @@ The log viewer reads `~/.hermes/logs/gateway.log` and provides:
 - **Word-wrap toggle**
 - **Copy / Clear / Refresh** actions
 - **Settings dialog** (font size, max lines, per-level visibility, …)
+- **Remembers window size/position** between opens
 - **Persisted** — all settings are saved to
   `~/.config/tray4hermes/state.json`
 
