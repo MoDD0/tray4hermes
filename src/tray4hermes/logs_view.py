@@ -459,7 +459,8 @@ class LogSettingsDialog(QDialog):
         row.addWidget(QLabel(_("Maximum lines in buffer:")))
         self._max_lines = QSpinBox()
         self._max_lines.setRange(0, 100_000)
-        self._max_lines.setSingleStep(500)
+        self._max_lines.setSingleStep(1)
+        self._max_lines.setAccelerated(True)
         self._max_lines.setValue(current.max_lines)
         self._max_lines.setToolTip(
             _("0 = unlimited (all lines). At higher values, older lines are gradually removed.")
@@ -637,7 +638,8 @@ class LogDialog(QDialog):
         tb.addWidget(QLabel(_("Max lines: ")))
         self._max_lines_spin = QSpinBox()
         self._max_lines_spin.setRange(0, 100_000)
-        self._max_lines_spin.setSingleStep(500)
+        self._max_lines_spin.setSingleStep(1)
+        self._max_lines_spin.setAccelerated(True)
         self._max_lines_spin.setValue(self._settings.max_lines)
         self._max_lines_spin.setToolTip(
             "Maximální počet řádků v bufferu (0 = bez limitu).\n"

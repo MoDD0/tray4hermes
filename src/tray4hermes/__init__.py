@@ -13,5 +13,5 @@ All of that lives in Hermes Agent itself.
 
 from __future__ import annotations
 
-__version__ = "2.0.7"
+__version__ = "2.0.8"
 __all__ = ["__version__"]

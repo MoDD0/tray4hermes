@@ -66,7 +66,7 @@ Log viewer čte `~/.hermes/logs/gateway.log` a nabízí:
   jen logy z poslední hodiny apod.
 - **Reverse order** (Obrátit) — přepne na `journalctl` styl
   (nejnovější nahoře); každý nový řádek se objeví jako první
-- **Max řádků** spinbox — rolling buffer (0 = unlimited)
+- **Max řádků** spinbox — rolling buffer (0 = unlimited). Krok 1; libovolnou hodnotu lze napsat ručně
 - **Search** (`Ctrl+F` → `F3` next, `Shift+F3` prev, `Esc` close)
 - **Auto-scroll toggle** (default ON; OFF = zachová pozici při refresh).
   Při ručním zkoumání logu viewer zachová vybranou pozici i při zapnutém

@@ -67,7 +67,7 @@ The log viewer reads `~/.hermes/logs/gateway.log` and provides:
   logs from the last hour, etc.
 - **Reverse order** — flip to `journalctl` style (newest at top); every new
   entry appears first
-- **Max lines** spinbox — rolling buffer (0 = unlimited)
+- **Max lines** spinbox — rolling buffer (0 = unlimited). Steps by 1; type any value manually
 - **Search** (`Ctrl+F` → `F3` next, `Shift+F3` prev, `Esc` close)
 - **Auto-scroll toggle** (default ON; OFF = preserve position on refresh).
   While investigating, the viewer preserves a manually selected scroll

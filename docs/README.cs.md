@@ -1,4 +1,4 @@
-# tray4hermes (česky)  <img src="https://img.shields.io/badge/version-2.0.6-blue" alt="version 2.0.6">[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+# tray4hermes (česky)  <img src="https://img.shields.io/badge/version-2.0.8-blue" alt="version 2.0.8">[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
@@ -70,7 +70,7 @@ Log viewer čte `~/.hermes/logs/gateway.log` a nabízí:
   jen logy z poslední hodiny apod.
 - **Reverse order** (Obrátit) — přepne na `journalctl` styl
   (nejnovější nahoře); každý nový řádek se objeví jako první
-- **Max řádků** spinbox — rolling buffer (0 = unlimited)
+- **Max řádků** spinbox — rolling buffer (0 = unlimited). Krok 1; libovolnou hodnotu lze napsat ručně
 - **Search** (`Ctrl+F` → `F3` next, `Shift+F3` prev, `Esc` close)
 - **Auto-scroll toggle** (default ON; OFF = zachová pozici při refresh).
   Při ručním zkoumání logu viewer zachová vybranou pozici i při zapnutém

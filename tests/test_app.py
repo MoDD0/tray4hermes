@@ -448,3 +448,17 @@ class TestLogDialog:
         # Oldest lines must be dropped
         assert "line 0" not in dlg._editor.toPlainText()
         assert "line 39" not in dlg._editor.toPlainText()
+
+    def test_log_settings_dialog_max_lines_spin_uses_single_step(self, hermes_home, qtbot) -> None:
+        # The max-lines spinbox should step by 1 (not 500) so users can
+        # fine-tune. They can still type any value manually.
+        from tray4hermes.logs_view import LogSettings, LogSettingsDialog
+
+        dlg = LogSettingsDialog(LogSettings(max_lines=2000))
+        qtbot.addWidget(dlg)
+        assert dlg._max_lines.singleStep() == 1
+        # Manual typing is unrestricted
+        dlg._max_lines.setValue(0)
+        dlg._max_lines.lineEdit().setText("350")
+        dlg._max_lines.lineEdit().editingFinished.emit()
+        assert dlg._max_lines.value() == 350
