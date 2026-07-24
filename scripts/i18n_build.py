@@ -17,11 +17,14 @@ This script does several things:
    present on disk** — exit non-zero if any are missing, so a
    missing PNG is caught by `pytest` rather than by a confused
    GitHub reader.
-5. **Substitutes the live package version** into the `<h1>` of
-   each compiled README. The version comes from
-   `src/tray4hermes/__init__.py::__version__`; we rewrite the
-   placeholder `<!-- tray4hermes:version -->` so the README always
-   shows the version it was built from.
+5. **Substitutes the live package version** as a shields.io badge on
+   the line below the `<!-- tray4hermes:version -->` marker, next to
+   the hand-written License / Python / ruff badges. The version comes
+   from `src/tray4hermes/__init__.py::__version__`, so the README
+   always shows the version it was built from.
+6. **Renders the visible language banner** under the auto-managed
+   comment block, with every label in the target locale's own
+   language.
 
 Run from the repo root:
     python scripts/i18n_build.py
@@ -75,9 +78,7 @@ _README_TARGETS: dict[str, str] = {
 # tuple here — the i18n lint then fails if anyone deletes the file by
 # accident.
 _IMAGE_LOCATIONS: tuple[tuple[str, str], ...] = (
-    ("docs/images/kde_tray.png", "KDE Plasma tray screenshot"),
-    ("docs/images/log_viewer.png", "log viewer screenshot"),
-    ("docs/images/preview.png", "combined tray/preview screenshot"),
+    ("docs/images/preview.png", "KDE Plasma tray screenshot"),
     ("docs/images/tray4hermes.png", "package logo"),
 )
 
@@ -89,20 +90,6 @@ class Locale:
     github_label: str
     source: Path
     target: Path
-
-    @property
-    def self_link(self) -> str:
-        """The link *to this locale's compiled file* as you'd reference it
-        from the repo root. Used by callers that need to drop a self-
-        pointing hyperlink (e.g. "Canonical: English (this file)").
-        """
-        return _link_to_repo_root(self.target)
-
-
-def _link_to_repo_root(abs_path: Path) -> str:
-    """Path relative to the repo root, with no leading slash."""
-    repo_root = Path(__file__).resolve().parent.parent
-    return str(abs_path).removeprefix(str(repo_root) + "/")
 
 
 def _link_from_to(from_locale: Locale, target: Locale) -> str:
@@ -205,65 +192,57 @@ def expand_languages(md: str, locales: list[Locale]) -> str:
     return _LANGS_RE.sub(render_languages_banner(locales), md)
 
 
-# Header rewrite: replace the legacy single-line language banner
-# (`> **Language:** [English](…) …`) with a stronger, auto-managed
-# paragraph that names the canonical version explicitly. This is
-# idempotent — old banners get rewritten on first build.
-_HEADER_LANG_RE = re.compile(
-    r"^>\s+\*\*Language:\*\*\s*.*?(?=\n\n|\n[^\n>])",
-    re.MULTILINE,
-)
-_HEADER_JAZYK_RE = re.compile(
-    r"^>\s+\*\*Jazyk:\*\*\s*.*?(?=\n\n|\n[^\n>])",
-    re.MULTILINE,
-)
+# Visible language banner, rendered under the auto-managed comment
+# block. Every label is per-locale: a Czech README with an English
+# "Other languages:" heading reads as a bug, because it is one.
+#
+# Adding a locale means adding a row here. A missing row is a hard
+# error — falling back to English would ship the very mixed-language
+# banner this table exists to prevent.
+_BANNER_LABELS: dict[str, tuple[str, str, str]] = {
+    # locale: (canonical label, other-languages label, self marker)
+    "en": ("Canonical:", "Other languages:", "(this file)"),
+    "cs": ("Hlavní jazyk:", "Ostatní jazyky:", "(tento soubor)"),
+}
+
+_BANNER_ANCHOR = "<!-- i18n:available-languages:END -->"
 
 
 def rewrite_header_banner(md: str, locales: list[Locale], current_code: str) -> str:
-    """Replace the legacy single-line 'Language:' / 'Jazyk:' banner
-    with an auto-managed multi-line paragraph.
+    """Insert the visible language banner under the i18n comment block.
 
-    Why we keep this even though we have a comment-based block: many
-    readers (and some tooling) parse the visible `> **Language:**`
-    line. We keep both: a visible banner AND a comment marker.
+    The comment block is invisible on GitHub; this paragraph is what a
+    reader actually sees and clicks. It names the language of the file
+    they're on and links to every other translation — never to itself.
     """
-    canonical = next(_loc for _loc in locales if _loc.code == current_code)
+    labels = _BANNER_LABELS.get(current_code)
+    if labels is None:
+        die(
+            f"no banner labels for locale '{current_code}'. "
+            f"Add a row to _BANNER_LABELS in {Path(__file__).name}.",
+            code=2,
+        )
+    canonical_label, others_label, self_marker = labels
 
-    # Build "Other languages: <links>" paragraph (skip the current
-    # one — a README shouldn't link to itself).
+    current = next(loc for loc in locales if loc.code == current_code)
     others = [loc for loc in locales if loc.code != current_code]
-
-    def _badge(link_to: Locale) -> str:
-        # `link_to.target` is the compiled file for `link_to`. From
-        # the standpoint of `current_code`'s compiled file, the path
-        # is given by `_link_from_to`. We resolve this per-target.
-        return f"[{link_to.github_label}]({_link_from_to(canonical, link_to)})"
-
-    other_links = " · ".join(_badge(loc) for loc in others)
-
-    canonical_label = {
-        "en": "Canonical:",
-        "cs": "Hlavní jazyk:",
-    }.get(current_code, "Canonical:")
-
-    new_block = (
-        f"> **{canonical_label}** {canonical.github_label} (this file)\n"
-        f">\n"
-        f"> **Other languages:** {other_links}"
+    other_links = " · ".join(
+        f"[{loc.github_label}]({_link_from_to(current, loc)})" for loc in others
     )
 
-    # Replace the legacy patterns if present, otherwise insert the
-    # banner immediately after the i18n comment block.
-    if _HEADER_LANG_RE.search(md):
-        md = _HEADER_LANG_RE.sub(new_block, md, count=1)
-    elif _HEADER_JAZYK_RE.search(md):
-        md = _HEADER_JAZYK_RE.sub(new_block, md, count=1)
-    else:
-        # Insert directly after the END comment.
-        end_marker = "<!-- i18n:available-languages:END -->"
-        if end_marker in md:
-            md = md.replace(end_marker, end_marker + "\n\n" + new_block, 1)
-    return md
+    banner = (
+        f"> **{canonical_label}** {current.github_label} {self_marker}\n"
+        f">\n"
+        f"> **{others_label}** {other_links}"
+    )
+
+    if _BANNER_ANCHOR not in md:
+        die(
+            f"i18n marker not found — cannot place the language banner. "
+            f"Expected a line containing: {_BANNER_ANCHOR}",
+            code=2,
+        )
+    return md.replace(_BANNER_ANCHOR, _BANNER_ANCHOR + "\n\n" + banner, 1)
 
 
 # Image-rewrite machinery. We want every compiled README to point at
@@ -316,14 +295,12 @@ def _relative_inside_repo(from_dir: Path, to_file: Path, repo_root: Path) -> str
     """
     target_abs = repo_root / to_file
     try:
-        rel = Path(target_abs).relative_to(from_dir)
-        return rel.as_posix()
+        return Path(target_abs).relative_to(from_dir).as_posix()
     except ValueError:
-        # Asset is not under `from_dir` — fall back to ``os.path.relpath``,
-        # which computes a path that uses ``..`` segments.
-        return Path(target_abs).resolve().relative_to(
-            Path(from_dir).resolve()
-        ).as_posix()
+        # Asset sits above `from_dir` (e.g. a repo-root logo referenced
+        # from `docs/README.cs.md`). `relative_to` can't express that;
+        # `os.path.relpath` climbs out with `..` segments.
+        return Path(os.path.relpath(target_abs, from_dir)).as_posix()
 
 
 _VERSION_RE = re.compile(r"^__version__\s*=\s*\"(\d+\.\d+\.\d+)\"\s*$", re.MULTILINE)
@@ -341,30 +318,49 @@ def _current_version() -> str:
     return match.group(1)
 
 
+# Version badge. The source marks the spot with a standalone
+# `<!-- tray4hermes:version -->` line; the compiled file keeps that
+# marker and puts a shields.io badge underneath, styled like the
+# hand-written License / Python / ruff badges next to it.
+#
+# The marker survives into the output as a DO-NOT-EDIT signal, the same
+# way the languages block does. Nothing in the build reads it back —
+# compiled READMEs are always regenerated from `docs/i18n/*.md`, never
+# from themselves. Matching an already-present badge line is what makes
+# the substitution safe to apply to its own output.
+_VERSION_PLACEHOLDER = "<!-- tray4hermes:version -->"
+_VERSION_BLOCK_RE = re.compile(
+    r"^<!--\s*tray4hermes:version[^<>]*?-->[ \t]*\n"
+    r"(?:\[!\[version:[^\n]*\n)?",
+    re.MULTILINE,
+)
+_RELEASES_URL = "https://github.com/MoDD0/tray4hermes/releases"
+
+
 def rewrite_version_placeholder(md: str, version: str) -> str:
     """Substitute the live package version into the README.
 
-    The source uses the form `# tray4hermes <!-- tray4hermes:version -->` or
-    `# tray4hermes (česky) <!-- tray4hermes:version -->`. The compiled file
-    drops the comment and renders the version as a small badge
-    immediately under the H1 so the README always shows the version
-    it was built from.
+    Emits a markdown badge on a line of its own. An inline `<img>`
+    appended to the H1 — the shape this used to have — is swallowed by
+    GitHub's heading renderer and comes out misformatted, so the badge
+    has to be a sibling of the other badges, not part of the title.
     """
-    return re.sub(
-        r"(\A#\s+[^\n]+?)\s*<!--\s*tray4hermes:version[^<>]*?-->",
-        lambda m: f"{m.group(1)}  <img src=\"https://img.shields.io/badge/version-{version}-blue\" alt=\"version {version}\">",
-        md,
-        count=1,
+    if not _VERSION_BLOCK_RE.search(md):
+        die(
+            f"version marker not found in source. Add a line containing:\n  {_VERSION_PLACEHOLDER}",
+            code=2,
+        )
+    badge = (
+        f"[![version: {version}]"
+        f"(https://img.shields.io/badge/version-{version}-blue.svg)]"
+        f"({_RELEASES_URL})"
     )
+    return _VERSION_BLOCK_RE.sub(f"{_VERSION_PLACEHOLDER}\n{badge}\n", md, count=1)
 
 
 def verify_assets(repo_root: Path) -> int:
     """Fail if any image the README references is missing on disk."""
-    missing = [
-        (rel, label)
-        for rel, label in _IMAGE_LOCATIONS
-        if not (repo_root / rel).is_file()
-    ]
+    missing = [(rel, label) for rel, label in _IMAGE_LOCATIONS if not (repo_root / rel).is_file()]
     for rel, label in missing:
         sys.stderr.write(f"missing README asset: {rel} ({label})\n")
     return 1 if missing else 0
