@@ -191,6 +191,12 @@ class TraySettingsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(_("tray4hermes Settings"))
         self.resize(400, 450)
+        # Brand icon so the title bar / taskbar entry don't fall back to
+        # the default Qt placeholder glyph when this dialog is opened
+        # outside ``HermesTray``.
+        from tray4hermes.icons import brand_icon
+
+        self.setWindowIcon(brand_icon())
         layout = QVBoxLayout(self)
 
         # ── Language ──────────────────────────────────────────────
@@ -238,7 +244,8 @@ class TraySettingsDialog(QDialog):
         row.addWidget(QLabel(_("Default line count:")))
         self._max_lines = QSpinBox()
         self._max_lines.setRange(0, 100_000)
-        self._max_lines.setSingleStep(500)
+        self._max_lines.setSingleStep(1)
+        self._max_lines.setAccelerated(True)
         self._max_lines.setValue(current.default_max_lines)
         self._max_lines.setToolTip(_("0 = unlimited"))
         row.addWidget(self._max_lines)

@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (
 
 from tray4hermes import __version__
 from tray4hermes import paths as _paths
-from tray4hermes.icons import STATE_COLORS, STATE_TOOLTIPS, make_icon
+from tray4hermes.icons import STATE_COLORS, STATE_TOOLTIPS, brand_icon, make_icon
 
 # After `i18n.install(...)` runs (in __main__), `tray4hermes.i18n._`
 # is bound to the active translation. We use a *dynamic* lookup so
@@ -68,6 +68,10 @@ class HermesTray:
     def __init__(self) -> None:
         self.app = QApplication.instance() or QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)
+        # Default window icon for every dialog this QApplication spawns
+        # (Log, About, Settings, QMessageBox). Avoids the default Qt
+        # placeholder glyph in title bars / taskbars.
+        self.app.setWindowIcon(brand_icon())
 
         self._tray_state: TrayState = load_tray_state()
         self._icons = {code: make_icon(color) for code, color in STATE_COLORS.items()}

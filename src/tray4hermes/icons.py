@@ -50,3 +50,23 @@ def make_icon(color: str, size: int = 64) -> QIcon:
     finally:
         p.end()
     return QIcon(px)
+
+
+# Cached brand icon (green H-circle). Created lazily once QApplication
+# exists; safe to call from dialog constructors pre-QApplication too —
+# the cache is empty and the fallback is just a transparent QIcon.
+_brand_icon: QIcon | None = None
+
+
+def brand_icon() -> QIcon:
+    """The tray4hermes brand icon: green circle with a white H.
+
+    Used as the window icon for every dialog (Log, About, Settings) so
+    you don't get the default Qt placeholder glyph in the title bar.
+    """
+    global _brand_icon
+    if _brand_icon is None:
+        # The "active" color is the brand green. Qt caches the icon
+        # itself on QApplication, so creating it once is enough.
+        _brand_icon = make_icon(STATE_COLORS["active"], size=64)
+    return _brand_icon

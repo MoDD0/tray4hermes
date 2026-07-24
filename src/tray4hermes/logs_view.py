@@ -448,6 +448,12 @@ class LogSettingsDialog(QDialog):
     def __init__(self, current: LogSettings, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle(_("Log viewer — settings"))
+        # Brand icon so title bar / taskbar entry don't fall back to the
+        # default Qt placeholder glyph when this dialog is opened outside
+        # ``HermesTray`` (e.g. test harness, standalone CLI).
+        from tray4hermes.icons import brand_icon
+
+        self.setWindowIcon(brand_icon())
         self.resize(420, 560)
         layout = QVBoxLayout(self)
 
@@ -584,6 +590,9 @@ class LogDialog(QDialog):
         self.setWindowTitle(
             _("Hermes Gateway — logs (tray4hermes v{version})").format(version=__version__)
         )
+        from tray4hermes.icons import brand_icon
+
+        self.setWindowIcon(brand_icon())
         self.resize(900, 500)
 
         self._settings = _load_log_settings()

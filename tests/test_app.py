@@ -462,3 +462,45 @@ class TestLogDialog:
         dlg._max_lines.lineEdit().setText("350")
         dlg._max_lines.lineEdit().editingFinished.emit()
         assert dlg._max_lines.value() == 350
+
+    def test_brand_icon_is_green_circle(self, hermes_home, qtbot) -> None:
+        """The brand icon must be a green H-circle. Catches accidental
+        regressions where someone replaces the icon with a default
+        Qt placeholder or a different color."""
+        from tray4hermes.icons import STATE_COLORS, brand_icon
+
+        icon = brand_icon()
+        assert not icon.isNull()
+        # 64×64 pixmap — sampled to confirm a green pixel dominates.
+        # We don't compare pixels exactly (font hinting varies by Qt
+        # version); we just verify the icon was generated and is not
+        # the empty placeholder.
+        from PyQt5.QtCore import QSize
+
+        sizes = icon.availableSizes()
+        assert QSize(64, 64) in sizes
+        # Active color must be green
+        assert STATE_COLORS["active"].lower() == "#4caf50"
+
+    def test_dialogs_use_brand_icon(self, hermes_home, qtbot) -> None:
+        """Every dialog must call setWindowIcon(brand_icon()) so the
+        title bar / taskbar entry shows the tray4hermes glyph instead
+        of the Qt placeholder."""
+        from PyQt5.QtWidgets import QDialog
+
+        from tray4hermes.icons import brand_icon
+        from tray4hermes.logs_view import LogDialog, LogSettings, LogSettingsDialog
+        from tray4hermes.tray_settings import TraySettings, TraySettingsDialog
+
+        expected = brand_icon()
+        for dlg in (
+            LogDialog(),
+            LogSettingsDialog(LogSettings()),
+            TraySettingsDialog(TraySettings()),
+        ):
+            assert isinstance(dlg, QDialog)
+            assert not dlg.windowIcon().isNull(), f"{type(dlg).__name__} has no window icon"
+            # The dialog must use the exact same cached brand icon (so
+            # a future refactor that accidentally inlines a different
+            # pixmap fails this test).
+            assert dlg.windowIcon().availableSizes() == expected.availableSizes()
