@@ -36,8 +36,9 @@ tray interface for monitoring and controlling it. The application:
 - **shows the gateway state** directly in the KDE panel (green/orange/red)
 - **lets you Start / Stop / Restart** without opening a terminal
 - **switches profiles** (`default`, `work`, `off`…) from a menu
-- **displays logs** in a viewer with colored levels,
-  filters, search, traceback-aware, time-window)
+- **displays logs** in a viewer with coloured levels, per-level filters,
+  search, traceback awareness and a time-window filter
+- **speaks English and Czech**, switchable at runtime without a restart
 - **reads Hermes runtime state** and uses the standard `systemctl` API.
 
 > ⚠️ **Disclaimer:** tray4hermes is a *passive convenience addon*, not an
@@ -55,6 +56,12 @@ tray interface for monitoring and controlling it. The application:
 - 📋 **Log viewer** — *see below*, it's quite polished
 - ⚙️ **Open Hermes config** in your default editor
 - 💻 **Launch Hermes CLI** in a new terminal
+- 🛠️ **Settings dialog** — UI language plus the defaults the log viewer
+  starts with, stored alongside the rest of the tray state
+- 🌍 **English and Czech UI** — pick a language in the Settings dialog and
+  the tray re-labels itself immediately, no restart; `tray4hermes -L en`
+  (or `cs`) overrides the stored choice for a single run, and
+  `tray4hermes --language` lists what the installed build ships
 
 ### Log viewer
 
@@ -128,7 +135,7 @@ The tray combines two sources of truth into six discrete states:
 | `activating` | 🔵 | systemd is starting the service |
 | `inactive` | ⚫ | Gateway stopped |
 | `failed` | 🔴 | systemd unit failed |
-| `unknown` | ⚫ | Cannot determine state (both sources unavailable) |
+| `unknown` | ⚪ | Cannot determine state (both sources unavailable) |
 
 `gateway_state.json` is the primary source when fresh (< 1 hour old);
 `systemctl is-active` is the fallback. The two-source design avoids
@@ -402,34 +409,59 @@ pre-commit run --all-files
 tray4hermes/
 ├── pyproject.toml            # PEP 621, uv-friendly, exact-pinned deps
 ├── LICENSE                   # MIT
-├── README.md                 # English (this file)
-├── docs/
-│   ├── README.cs.md          # Czech version
-│   └── images/
-│       └── preview.png      # screenshot for README
+├── README.md                 # generated from docs/i18n/en.md — don't edit
+├── CONTRIBUTING.md
+├── CLAUDE.md                 # briefing for AI assistants working here
+├── .claude/                  # architecture, conventions, session log, specs
 ├── .gitignore                # incl. secret patterns
 ├── .pre-commit-config.yaml
 ├── run.sh                    # watchdog wrapper
+├── docs/
+│   ├── README.cs.md          # generated from docs/i18n/cs.md — don't edit
+│   ├── i18n/
+│   │   ├── en.md             # canonical README source (source of truth)
+│   │   └── cs.md             # Czech translation of en.md
+│   └── images/
+│       ├── preview.png       # screenshot for README
+│       └── tray4hermes.png   # package logo
 ├── scripts/
-│   └── dev.sh                # install + test convenience
+│   ├── dev.sh                # install + test convenience
+│   ├── i18n_build.py         # docs/i18n/*.md → README.md + docs/README.cs.md
+│   ├── i18n_compile.sh       # .po → .mo for the UI catalogs
+│   ├── i18n_lint.py          # heading parity across README translations
+│   └── versioning.py         # SemVer bump helper
 ├── src/
 │   └── tray4hermes/
 │       ├── __init__.py       # __version__ (single source of truth)
 │       ├── __main__.py       # python -m tray4hermes (argparse entry)
-│       ├── app.py            # HermesTray QObject glue
+│       ├── app.py            # HermesTray — icon, menu, poll timer
 │       ├── state.py          # @dataclass + aggregation logic
-│       ├── paths.py          # all filesystem constants
+│       ├── paths.py          # all filesystem paths and tunables
 │       ├── icons.py          # QPainter icon factory
 │       ├── lock.py           # single-instance lock
 │       ├── logs_view.py      # LogDialog (full-featured viewer)
+│       ├── tray_settings.py  # global settings dialog (language, defaults)
+│       ├── i18n.py           # gettext wrapper + runtime language switch
 │       ├── py.typed          # PEP 561 marker
+│       ├── _locales/         # UI catalogs, shipped inside the wheel
+│       │   ├── tray4hermes.pot
+│       │   └── cs/LC_MESSAGES/tray4hermes.{po,mo}
 │       └── data/
 │           └── tray4hermes.desktop  # ships inside the wheel
 └── tests/
     ├── conftest.py
-    ├── test_state.py         # pure-Python, ~30 tests
-    ├── test_lock.py          # pure-Python, ~5 tests
-    └── test_app.py           # Qt offscreen, ~20 tests
+    ├── test_app.py           # Qt offscreen — tray menu and actions
+    ├── test_editor_picker.py # "Open config" editor resolution
+    ├── test_i18n_build.py    # README build script
+    ├── test_i18n_parity.py   # build + lint scripts wired into pytest
+    ├── test_i18n_runtime.py  # gettext catalogs, msgid language
+    ├── test_lock.py          # single-instance lock
+    ├── test_readme_freshness.py  # compiled READMEs match their sources
+    ├── test_readme_parity.py # image parity between en.md and cs.md
+    ├── test_settings_dialog.py   # log-viewer settings dialog
+    ├── test_state.py         # state aggregation and persistence
+    ├── test_tray_settings.py # global tray settings
+    └── test_versioning.py    # SemVer bump helper
 ```
 
 ## License
@@ -461,9 +493,11 @@ Issues, comments, suggestions — all welcome. Whether it's:
   the area where contributor taste matters most.
 - 📖 **Documentation** — screenshots of the log viewer are missing;
   feel free to add them
-- 🌍 **Localization** — currently the UI is in Czech (except the
-  README, which is English here). If you need it in another language,
-  I'll add `_()` wrappers soon
+- 🌍 **Localization** — the UI runs through `gettext` and ships English
+  and Czech. Another language means one `.po` file under
+  `src/tray4hermes/_locales/`; the README translations live separately in
+  `docs/i18n/`. Both routes are described in
+  [CONTRIBUTING.md](CONTRIBUTING.md)
 - 🐧 **Distro-specific fixes** — see [Platform support](#platform-support).
   Every distro we test on is a contribution away
 
@@ -483,7 +517,8 @@ git push
 
 Rules (flexible):
 
-1. **Don't break the tests.** 56 tests must stay green.
+1. **Don't break the tests.** The whole suite must stay green —
+   `./scripts/dev.sh` runs it.
 2. **Don't add new runtime dependencies** without discussion — the
    package has one runtime dependency (`PyQt5`), and we want to keep it
    that way.

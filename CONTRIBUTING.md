@@ -14,9 +14,12 @@ uv pip install --system -e ".[dev]"
 
 Make a change, push, open a PR.
 
-## Ground rules (pružné, ale platné)
+## Ground rules (flexible, but real)
 
-1. **Don't break the tests.** 56 tests must stay green.
+1. **Don't break the tests.** The whole suite must stay green;
+   `./scripts/dev.sh` runs it. (No fixed test count is quoted anywhere
+   on purpose — a number in prose goes stale the first time somebody
+   adds a test.)
 2. **Don't add new runtime dependencies** without discussion — the
    package has one runtime dep (`PyQt5`), and we want to keep it
    that way.
@@ -26,15 +29,29 @@ Make a change, push, open a PR.
    is owned by Hermes Agent.
 5. **MIT-compatible contributions.** Same license as the project.
 6. **User-visible changes update documentation in the same commit.** Edit
-   `docs/i18n/en.md` and `docs/i18n/cs.md`, then run
+   `docs/i18n/en.md` — it is the single source of truth — then bring
+   `docs/i18n/cs.md` in line with it as a *translation of the new text*,
+   never as a document that evolves on its own. Finally run
    `python scripts/i18n_build.py` to regenerate `README.md` and
-   `docs/README.cs.md`.
+   `docs/README.cs.md`, and commit sources and generated files together.
 
-## Adding a new translation (language)
+## Translations: two separate things
 
-We support **English (canonical)** and **Czech** out of the box.
-For other languages, follow these conventions so the build tools
-stay sane and the language picker stays in sync.
+tray4hermes is translated in two independent places, and a new language
+usually means touching only one of them:
+
+| What | Lives in | Shipped as |
+|---|---|---|
+| **README / docs prose** | `docs/i18n/<lang>.md` | `README.md`, `docs/README.<lang>.md` |
+| **UI strings** (menu, dialogs, tooltips) | `src/tray4hermes/_locales/<lang>/LC_MESSAGES/` | `gettext` catalogs inside the wheel |
+
+Both currently cover **English (canonical)** and **Czech**. The two
+sections below describe each route.
+
+## Adding a README translation
+
+Follow these conventions so the build tools stay sane and the language
+picker stays in sync.
 
 ### File conventions
 
@@ -85,9 +102,19 @@ are fine.
        "de": "docs/README.de.md",  # ← new
    }
    ```
-   In `rewrite_header_banner()`, add a label for your locale in
-   the `canonical_label` dict so "Canonical: Deutsch (this file)"
-   reads naturally.
+   Then add a row to the `_BANNER_LABELS` dict in the same file, so
+   the visible banner reads in your language rather than in English:
+   ```python
+   _BANNER_LABELS: dict[str, tuple[str, str, str]] = {
+       # locale: (canonical label, other-languages label, self marker)
+       "en": ("Canonical:", "Other languages:", "(this file)"),
+       "cs": ("Hlavní jazyk:", "Ostatní jazyky:", "(tento soubor)"),
+       "de": ("Hauptsprache:", "Weitere Sprachen:", "(diese Datei)"),  # ← new
+   }
+   ```
+   A missing row is a hard error (exit 2) rather than a fallback to
+   English — a Czech README with an English "Other languages:" heading
+   is a bug, so the build refuses to produce one.
 
 5. **Run the build:** `python scripts/i18n_build.py`. This
    regenerates `README.md` (canonical) and `docs/README.<lang>.md`
@@ -100,8 +127,8 @@ are fine.
    a missed section.
 
 7. **Open a PR.** Title it like `i18n: add German (de) translation`.
-   The build script will re-generate the auto-mananged cross-link
-   banner, so the diff for your PR should include:
+   The build script re-generates the auto-managed cross-link banner,
+   so the diff for your PR should include:
    - `docs/i18n/de.md` (your translation source)
    - `scripts/i18n_build.py` (3-line registration)
    - `README.md` (the canonical will get a new "Other languages"
@@ -122,11 +149,9 @@ attached.
 - **Technical terms stay in English** inside code spans:
   `- `~/.hermes/config.yaml`` is `- `~/.hermes/config.yaml``
   even in Czech (where one would normally use a backtick variant).
-- **UI strings in code are Czech-friendly.** Tray toolbars are in
-  Czech and that's intentional. Don't translate `Kopírovat`,
-  `Vyčistit` to `Copy`, `Clear` — leave them. (If we ever
-  internationalise the UI strings, that's a separate project
-  using `gettext`.)
+- **Don't translate UI strings here.** The tray's own labels are
+  handled by `gettext`, not by the README sources — see
+  [Adding a UI translation](#adding-a-ui-translation) below.
 - **Date format / currency** — README rarely uses them; if you
   hit one, prefer ISO 8601 (`2026-07-22`).
 - **Acronyms** — first usage parenthetical, e.g.
@@ -156,6 +181,48 @@ That means:
   sections in your translation.
 - The build is **idempotent** — running it twice produces the
   same output.
+
+## Adding a UI translation
+
+The tray's own labels — menu entries, dialogs, tooltips — go through
+stdlib `gettext`. There is no runtime dependency and no build step
+beyond compiling the catalog.
+
+1. **Copy the Czech catalog as your starting point:**
+   ```bash
+   mkdir -p src/tray4hermes/_locales/de/LC_MESSAGES
+   cp src/tray4hermes/_locales/cs/LC_MESSAGES/tray4hermes.po \
+      src/tray4hermes/_locales/de/LC_MESSAGES/tray4hermes.po
+   ```
+   Start from the `cs` catalog, **not** from
+   `_locales/tray4hermes.pot` — the template is stale and still
+   carries Czech `msgid`s from before the source strings were
+   flipped to English.
+
+2. **Translate the `msgstr` lines** and leave every `msgid` alone.
+   Msgids are English by contract; `tests/test_i18n_runtime.py`
+   scans the source with an AST walk and fails if a non-English
+   literal shows up inside `_()`.
+
+3. **Update the catalog header** — `Language: de\n`, plus your name
+   in `Last-Translator` if you want the credit.
+
+4. **Compile:** `./scripts/i18n_compile.sh`. This turns every `.po`
+   under `src/tray4hermes/_locales/` into the `.mo` that ships inside
+   the wheel. Commit both files — the `.mo` is package data, not a
+   build artefact we regenerate at install time.
+
+5. **Check it end to end:**
+   ```bash
+   python -m tray4hermes --language      # lists what the build ships
+   python -m tray4hermes -L de           # runs the tray in your language
+   ```
+   Also open Settings and switch languages there: the tray re-labels
+   itself live, so an untranslated string is visible immediately.
+
+6. **Open a PR** titled like `i18n: add German (de) UI translation`.
+   A UI translation and a README translation are separate PRs unless
+   you are doing both for the same language.
 
 ## Adding a new feature (not just translation)
 
@@ -193,14 +260,16 @@ act (e.g. switching to Plasma 6 / Qt6), not a surprise.
 Before committing completed work:
 
 1. Choose the Conventional Commit type from the table.
-2. Install hooks once with `pre-commit install --hook-type pre-commit
-   --hook-type prepare-commit-msg`. The `prepare-commit-msg` hook derives the
-   required bump from the commit type and rejects a missing or wrong bump.
-3. If hooks are unavailable, run `python scripts/versioning.py
-   patch|minor|major` manually when required.
-4. Run the full quality gates.
-5. Stage the implementation, tests, and version bump together in one commit.
-6. Do not create a tag or GitHub release unless explicitly requested.
+2. Bump the version with `python scripts/versioning.py
+   patch|minor|major`.
+3. Run the full quality gates.
+4. Stage the implementation, tests, and version bump together in one commit.
+5. Do not create a tag or GitHub release unless explicitly requested.
+
+> ⚠️ The automated bump check is currently being reworked, so treat
+> step 2 as manual and don't assume a hook will catch a missing bump.
+> The version has already gone **backwards** once because nothing was
+> enforcing it.
 
 The package version has a single source of truth:
 `src/tray4hermes/__init__.py::__version__`.
@@ -208,8 +277,8 @@ The package version has a single source of truth:
 ## Where to ask
 
 - **Issue tracker:** https://github.com/MoDD0/tray4hermes/issues
-  (GitHub is the canonical host; the Forgejo mirror does not
-  accept issues)
+  (GitHub is the canonical host — all issues, PRs and releases
+  live there)
 - **Security disclosures:** GitHub's "Report a vulnerability"
   button (Settings → Security) — please, **do not** post security
   issues publicly
