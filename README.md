@@ -1,6 +1,6 @@
 # tray4hermes  
 
-[![version: 2.0.5](https://img.shields.io/badge/version-2.0.5-blue)
+[![version: 2.0.5](https://img.shields.io/badge/version-2.0.5-blue)](https://github.com/MoDD0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -97,10 +97,10 @@ application supports English and Czech UI text.
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Hermes Agent (Nous Research)                         │
+│  Hermes Agent (Nous Research)                        │
 │  • hermes-gateway.service   (systemd --user)         │
 │  • Hermes Desktop           (Electron consumer)      │
-│  • CLI / TUI / MCP / Plugins                          │
+│  • CLI / TUI / MCP / Plugins                         │
 └──────────────────────┬───────────────────────────────┘
                        │ shares
                        ▼
@@ -113,7 +113,7 @@ application supports English and Czech UI text.
                        ▲
                        │ reads (read-only)
 ┌──────────────────────┴───────────────────────────────┐
-│  tray4hermes  (this package)                          │
+│  tray4hermes  (this package)                         │
 │  • systray icon  • Start/Stop/Restart                │
 │  • profile switcher  • log viewer                    │
 │  • writes only: ~/.config/tray4hermes/state.json     │
@@ -552,18 +552,3 @@ interests you more than the rest, speak up:
 
 ---
 
-## Credits & thanks
-
-**Developed with the help of MiniMax-M3** (`MiniMax-M3` via
-`minimax-oauth`), as the primary model for coding and review. Most
-of the code in v2.0 was produced as part of an AI-assisted
-development test — from bug diagnosis through refactoring to the
-full rewrite of `logs_view.py` from 59 lines to 800+. If M3 (or a
-future iteration) makes a mistake in something I have here, that's
-on me — final review and commits are mine.
-
-Thanks to [@NousResearch](https://github.com/NousResearch) for
-Hermes Agent, and to the wider open-source AI-agent ecosystem.
-
-And thanks to any contributor who shows up here — whether with a PR
-or just with an issue. This is a small project, but small projects
