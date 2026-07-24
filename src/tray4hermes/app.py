@@ -401,7 +401,17 @@ class HermesTray:
         )
 
     def _on_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
-        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+        # Both single-click (Trigger) and DoubleClick open the log
+        # viewer. KDE Plasma's StatusNotifierItem backend emits
+        # Trigger on every click and only sometimes DoubleClick
+        # dependening on the applet / shell version; responding to
+        # both means the behaviour stays predictable across desktops.
+        # Qt's built-in contextMenu handling takes care of the
+        # right-click popup, so we don't need to filter that here.
+        if reason in (
+            QSystemTrayIcon.ActivationReason.Trigger,
+            QSystemTrayIcon.ActivationReason.DoubleClick,
+        ):
             self._show_logs()
 
     def _refresh(self) -> None:

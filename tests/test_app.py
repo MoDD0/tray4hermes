@@ -167,6 +167,36 @@ class TestHermesTrayConstruction:
             i18n.install("en")
             tray._quit()
 
+    def test_single_click_on_tray_opens_log_viewer(self, hermes_home, monkeypatch) -> None:
+        """Single-click on the tray icon (KDE/SNI default) must open the
+        log viewer. Plasma's StatusNotifierItem often suppresses the
+        DoubleClick signal and emits only Trigger; GLib-only backends
+        do the same. The activation handler must be ready for both."""
+        from PyQt5.QtWidgets import QSystemTrayIcon
+
+        from tray4hermes.app import HermesTray
+
+        opened = []
+        monkeypatch.setattr(HermesTray, "_show_logs", lambda self: opened.append("logs"))
+
+        # Double-click path
+        tray = HermesTray()
+        try:
+            tray._on_activated(QSystemTrayIcon.ActivationReason.DoubleClick)
+            assert opened == ["logs"], "DoubleClick should open log viewer"
+            opened.clear()
+
+            # Single-click path (the primary one on KDE Plasma 5/6)
+            tray._on_activated(QSystemTrayIcon.ActivationReason.Trigger)
+            assert opened == ["logs"], "Trigger (single-click) should open log viewer"
+            opened.clear()
+
+            # MiddleClick = about dialog
+            tray._on_activated(QSystemTrayIcon.ActivationReason.MiddleClick)
+            assert opened == [], "MiddleClick should NOT open log viewer"
+        finally:
+            tray._quit()
+
 
 class TestLogDialog:
     def test_dialog_construction_with_missing_log(self, hermes_home, qtbot) -> None:
