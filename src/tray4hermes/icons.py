@@ -11,24 +11,49 @@ from __future__ import annotations
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QIcon, QPainter, QPixmap
 
-# ── State → (color, tooltip) ───────────────────────────────────────────────
+# Dynamic gettext lookup — see the same wrapper in app.py for why it
+# reads ``i18n._`` on every call instead of binding it at import time.
+try:
+    from tray4hermes import i18n as _i18n_mod
+
+    def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
+        """Dynamic gettext wrapper — looks up i18n._ on every call."""
+        return _i18n_mod._(s)  # type: ignore[attr-defined]
+except ImportError:
+
+    def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
+        return s
+
+
+# ── State → color ──────────────────────────────────────────────────────────
 STATE_COLORS: dict[str, str] = {
-    "active": "#4caf50",  # zelená
-    "warming": "#ff9800",  # oranžová
-    "activating": "#2196f3",  # modrá
-    "inactive": "#9e9e9e",  # šedá
-    "failed": "#f44336",  # červená
-    "unknown": "#9e9e9e",  # šedá
+    "active": "#4caf50",  # green
+    "warming": "#ff9800",  # orange
+    "activating": "#2196f3",  # blue
+    "inactive": "#9e9e9e",  # grey
+    "failed": "#f44336",  # red
+    "unknown": "#9e9e9e",  # grey
 }
 
-STATE_TOOLTIPS: dict[str, str] = {
-    "active": "Hermes Gateway — běží a připojená",
-    "warming": "Hermes Gateway — běží, čeká na připojení",
-    "activating": "Hermes Gateway — startuje…",
-    "inactive": "Hermes Gateway — zastavena",
-    "failed": "Hermes Gateway — selhala!",
-    "unknown": "Hermes Gateway — neznámý stav",
-}
+
+def state_tooltip(code: str) -> str:
+    """Translated tray tooltip for a state code.
+
+    A function, not a module-level dict: the dict literal would be
+    evaluated at import time, which is *before* ``i18n.install()``
+    runs, so every tooltip would freeze in the startup language and
+    ignore a later ``switch_language()``. Building it per call costs
+    nothing — the tray only asks when the state actually changes.
+    """
+    tooltips = {
+        "active": _("Hermes Gateway — running and connected"),
+        "warming": _("Hermes Gateway — running, waiting for connection"),
+        "activating": _("Hermes Gateway — starting…"),
+        "inactive": _("Hermes Gateway — stopped"),
+        "failed": _("Hermes Gateway — failed!"),
+        "unknown": _("Hermes Gateway — unknown state"),
+    }
+    return tooltips.get(code, tooltips["unknown"])
 
 
 def make_icon(color: str, size: int = 64) -> QIcon:

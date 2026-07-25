@@ -1,252 +1,436 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) 2026 MoDDO
+# Copyright (C) YEAR MoDDO
 # This file is distributed under the same license as the tray4hermes package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
-# Source-of-truth strings live in src/tray4hermes/*.py and are wrapped in
-# gettext calls (_("...")). Run scripts/extract_messages.py to refresh this
-# template from the source code; translators normally edit .po files derived
-# from it. DO NOT add translations here — only msgid entries (English source
-# strings) — translations belong in <lang>.po files.
+#, fuzzy
 msgid ""
 msgstr ""
+"Project-Id-Version: tray4hermes\n"
+"Report-Msgid-Bugs-To: https://github.com/MoDD0/tray4hermes/issues\n"
+"POT-Creation-Date: 2026-07-25 09:55+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
-"Language: en\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Content-Transfer-Encoding: 8bit\n"
 
-#: src/tray4hermes/app.py:105
-msgid "Kontroluji…"
+#: src/tray4hermes/app.py:136
+msgid "Checking…"
 msgstr ""
 
-#: src/tray4hermes/app.py:109
-msgid "Model: ?"
+#: src/tray4hermes/app.py:143 src/tray4hermes/app.py:476
+#, python-brace-format
+msgid "Model: {model}"
 msgstr ""
 
-#: src/tray4hermes/app.py:117
-msgid "Profil"
+#: src/tray4hermes/app.py:151
+msgid "Profile"
 msgstr ""
 
-#: src/tray4hermes/app.py:122
+#: src/tray4hermes/app.py:156
 msgid "▶  Start"
 msgstr ""
 
-#: src/tray4hermes/app.py:126
+#: src/tray4hermes/app.py:160
 msgid "⏹  Stop"
 msgstr ""
 
-#: src/tray4hermes/app.py:130
+#: src/tray4hermes/app.py:164
 msgid "🔄 Restart"
 msgstr ""
 
-#: src/tray4hermes/app.py:136
-msgid "📋 Logy"
+#: src/tray4hermes/app.py:170
+msgid "📋 Logs"
 msgstr ""
 
-#: src/tray4hermes/app.py:140
+#: src/tray4hermes/app.py:174
+msgid "⚙  tray4hermes Settings"
+msgstr ""
+
+#: src/tray4hermes/app.py:178
 msgid "⚙  Hermes config"
 msgstr ""
 
-#: src/tray4hermes/app.py:144
+#: src/tray4hermes/app.py:182
 msgid "💻  Hermes CLI"
 msgstr ""
 
-#: src/tray4hermes/app.py:150
-msgid "ℹ  O tray4hermes"
+#: src/tray4hermes/app.py:188
+msgid "ℹ  About tray4hermes"
 msgstr ""
 
-#: src/tray4hermes/app.py:154
-msgid "✖  Ukončit tray"
+#: src/tray4hermes/app.py:192
+msgid "✖  Quit tray"
 msgstr ""
 
-#: src/tray4hermes/app.py:182
-msgid "Změnit profil?"
+#: src/tray4hermes/app.py:229
+msgid "Change profile?"
 msgstr ""
 
-#: src/tray4hermes/app.py:183
+#: src/tray4hermes/app.py:231
+#, python-brace-format
 msgid ""
-"Restartovat gateway s profilem '{name}'?\n\n"
-"Aktuální session v Discordu/Hermes Desktopu se může krátce odpojit."
+"Restart gateway with profile '{name}'?\n"
+"\n"
+"Current session in Discord/Hermes Desktop may briefly disconnect."
 msgstr ""
 
-#: src/tray4hermes/app.py:195
-msgid "Chyba"
+#: src/tray4hermes/app.py:244 src/tray4hermes/app.py:311
+#: src/tray4hermes/app.py:392 src/tray4hermes/app.py:428
+msgid "Error"
 msgstr ""
 
-#: src/tray4hermes/app.py:196
+#: src/tray4hermes/app.py:246
+#, python-brace-format
 msgid ""
-"Nelze nastavit profil '{name}':\n\n"
-"{out_msg}\n\n"
-"Profil musí existovat v {profiles_dir}/."
+"Cannot set profile '{name}':\n"
+"\n"
+"{out_msg}\n"
+"\n"
+"Profile must exist in {profiles_dir}/."
 msgstr ""
 
-#: src/tray4hermes/app.py:196
-msgid "(bez výstupu)"
+#: src/tray4hermes/app.py:250
+msgid "(no output)"
 msgstr ""
 
-#: src/tray4hermes/app.py:228
-msgid "Config nenalezen:\n{config}"
-msgstr ""
-
-#: src/tray4hermes/app.py:247
+#: src/tray4hermes/app.py:311
+#, python-brace-format
 msgid ""
-"<b>tray4hermes v{version}</b><br><br>"
-"Pasivní observer pro Hermes Gateway.<br><br>"
-"<b>Čte:</b> ~/.hermes/{{gateway_state.json, profiles/, config.yaml, "
-"logs/gateway.log}}<br>"
-"<b>Píše:</b> ~/.config/tray4hermes/state.json<br>"
-"<b>Ovládá:</b> systemctl --user ({service})<br><br>"
-"Hermes Agent: github.com/NousResearch/hermes-agent"
+"Config not found:\n"
+"{config}"
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:406
-msgid "Log viewer — nastavení"
+#: src/tray4hermes/app.py:393
+#, python-brace-format
+msgid "No terminal emulator found. Tried: {tried}"
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:411
-msgid "Maximální počet řádků v bufferu:"
-msgstr ""
-
-#: src/tray4hermes/logs_view.py:421
-msgid "Velikost písma:"
-msgstr ""
-
-#: src/tray4hermes/logs_view.py:429
-msgid "Auto-scroll na nové řádky"
-msgstr ""
-
-#: src/tray4hermes/logs_view.py:434
-msgid "Zalamovat dlouhé řádky"
-msgstr ""
-
-#: src/tray4hermes/logs_view.py:439
-msgid "Zobrazované úrovně:"
-msgstr ""
-
-#: src/tray4hermes/logs_view.py:524
-msgid "Max řádků: "
-msgstr ""
-
-#: src/tray4hermes/logs_view.py:531
+#: src/tray4hermes/app.py:429
+#, python-brace-format
 msgid ""
-"Maximální počet řádků v bufferu (0 = bez limitu).\n"
-"Starší řádky jsou průběžně odstraňovány."
+"Could not run {command}:\n"
+"{error}"
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:541
-msgid "Čas: "
-msgstr ""
-
-#: src/tray4hermes/logs_view.py:556
-msgid "Zobrazit pouze řádky z posledních X minut (0 = vše)."
-msgstr ""
-
-#: src/tray4hermes/logs_view.py:563
-msgid "Obrátit"
-msgstr ""
-
-#: src/tray4hermes/logs_view.py:564
+#: src/tray4hermes/app.py:439
+#, python-brace-format
 msgid ""
-"Při zapnutí: nejnovější řádky nahoře (journalctl styl).\n"
-"Při vypnutí: nejnovější dole (tail -f styl)."
+"<b>tray4hermes v{version}</b><br><br>Passive observer for Hermes Gateway."
+"<br><br><b>Reads:</b> ~/.hermes/{{gateway_state.json, profiles/, "
+"config.yaml, logs/gateway.log}}<br><b>Writes:</b> ~/.config/tray4hermes/"
+"state.json<br><b>Controls:</b> systemctl --user ({service})<br><br>Hermes "
+"Agent: github.com/NousResearch/hermes-agent"
 msgstr ""
 
-#: src/tray4hermes/app.py — flow descriptors (state.label)
-#: src/tray4hermes/app.py:570
-msgid "Auto-scroll"
+#: src/tray4hermes/icons.py:49
+msgid "Hermes Gateway — running and connected"
 msgstr ""
 
-#: src/tray4hermes/app.py:577
-msgid "Zalamovat"
+#: src/tray4hermes/icons.py:50
+msgid "Hermes Gateway — running, waiting for connection"
 msgstr ""
 
-#: src/tray4hermes/app.py:585
-msgid "Filtr: "
+#: src/tray4hermes/icons.py:51
+msgid "Hermes Gateway — starting…"
 msgstr ""
 
-#: src/tray4hermes/app.py:613
-msgid "Hledat: "
+#: src/tray4hermes/icons.py:52
+msgid "Hermes Gateway — stopped"
 msgstr ""
 
-#: src/tray4hermes/app.py:615
-msgid "Ctrl+F"
+#: src/tray4hermes/icons.py:53
+msgid "Hermes Gateway — failed!"
 msgstr ""
 
-#: src/tray4hermes/app.py:619
-msgid "Najít"
+#: src/tray4hermes/icons.py:54
+msgid "Hermes Gateway — unknown state"
 msgstr ""
 
-#: src/tray4hermes/app.py:621
-msgid "Kopírovat"
+#: src/tray4hermes/i18n.py:155
+msgid "System (follow locale)"
 msgstr ""
 
-#: src/tray4hermes/app.py:622
-msgid "Vyčistit"
+#: src/tray4hermes/logs_view.py:505
+msgid "Log viewer — settings"
 msgstr ""
 
-#: src/tray4hermes/app.py:624
-msgid "Obnovit"
+#: src/tray4hermes/logs_view.py:516
+msgid "Display"
 msgstr ""
 
-#: src/tray4hermes/app.py:625
-msgid "Nastavení"
+#: src/tray4hermes/logs_view.py:520
+msgid "Maximum lines in buffer:"
 msgstr ""
 
-#: src/tray4hermes/app.py:472
-msgid "Hermes Gateway — logy (tray4hermes v{version})"
+#: src/tray4hermes/logs_view.py:527 src/tray4hermes/logs_view.py:730
+msgid ""
+"0 = unlimited (all lines). At higher values, older lines are gradually "
+"removed."
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:502
+#: src/tray4hermes/logs_view.py:534
+msgid "Font size:"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:543
+msgid "Time window:"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:548 src/tray4hermes/logs_view.py:745
+msgid "All"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:560
+msgid "Behavior"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:562
+msgid "Auto-scroll on new lines"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:566
+msgid ""
+"When ON, the editor stays on the last line on refresh. When OFF, cursor "
+"position is preserved."
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:572
+msgid "Wrap long lines"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:576
+msgid "Reverse order (newest first)"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:580 src/tray4hermes/logs_view.py:766
+msgid ""
+"Journalctl style — newest lines at top, oldest at bottom. Default: newest at "
+"bottom (tail -f style)."
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:586
+msgid "Show tracebacks (stack traces)"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:590
+msgid ""
+"Special category for stack trace lines. You can hide them and see only "
+"messages, or leave them visible."
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:597
+msgid "Level filtering"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:598
+msgid "Visible levels:"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:653
+#, python-brace-format
+msgid "Hermes Gateway — logs (tray4hermes v{version})"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:700 src/tray4hermes/logs_view.py:819
 msgid "Find"
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:503
+#: src/tray4hermes/logs_view.py:702
 msgid "Find next"
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:509
+#: src/tray4hermes/logs_view.py:708
 msgid "Find prev"
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:515
-msgid "Escape"
+#: src/tray4hermes/logs_view.py:723
+msgid "Max lines: "
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:764
-msgid "Řádek"
+#: src/tray4hermes/logs_view.py:737
+msgid "Time: "
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:765
-msgid "Sloupec"
+#: src/tray4hermes/logs_view.py:755
+msgid "Show only lines from the last X minutes (0 = all)."
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:766
-msgid "Viditelných"
+#: src/tray4hermes/logs_view.py:762
+msgid "Reverse"
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:766
+#: src/tray4hermes/logs_view.py:777 src/tray4hermes/logs_view.py:1000
+msgid "Auto-scroll"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:783
+msgid "Wrap"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:790
+msgid "Filter: "
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:812
+msgid "Search: "
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:814
+msgid "Ctrl+F"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:826
+msgid "Copy"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:827
+msgid "Clear"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:829
+msgid "Refresh"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:830
+msgid "Settings"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:881
+#, python-brace-format
+msgid "Cannot read {path}: {error}"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:998
+msgid "Line"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:998
+msgid "Column"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:999
+msgid "Visible"
+msgstr ""
+
+#: src/tray4hermes/logs_view.py:999
 msgid "ERR"
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:766
+#: src/tray4hermes/logs_view.py:999
 msgid "WARN"
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:766
-msgid "ZAP"
+#: src/tray4hermes/logs_view.py:1000
+msgid "ON"
 msgstr ""
 
-#: src/tray4hermes/logs_view.py:766
-msgid "VYP"
+#: src/tray4hermes/logs_view.py:1000
+msgid "OFF"
 msgstr ""
 
-#: src/tray4hermes/__main__.py:54
+#. TRANSLATORS: body of a dialog shown when another instance
+#. of the tray is already running (we hold a single-instance
+#. lock and refuse to start a second).
+#: src/tray4hermes/__main__.py:162
 msgid ""
 "tray4hermes is already running.\n"
 "Find it in the system tray."
 msgstr ""
 
-# Time-window combo — internal key "all" maps to the displayed
-# "All" label. Translations should provide the local equivalent of
-# "All" (or whatever is appropriate for "no filter").
-#: src/tray4hermes/logs_view.py:540
-msgid "all"
+#: src/tray4hermes/state.py:158
+msgid "(config unreadable)"
+msgstr ""
+
+#: src/tray4hermes/state.py:175
+msgid "(model not found)"
+msgstr ""
+
+#: src/tray4hermes/state.py:190
+#, python-brace-format
+msgid "(subprocess error: {error})"
+msgstr ""
+
+#: src/tray4hermes/state.py:222
+msgid "Gateway reports stopped"
+msgstr ""
+
+#: src/tray4hermes/state.py:227
+msgid "Gateway is running and connected"
+msgstr ""
+
+#: src/tray4hermes/state.py:228
+msgid "Gateway is running, waiting for connection"
+msgstr ""
+
+#: src/tray4hermes/state.py:238
+msgid "Gateway is running (from cached gateway_state.json)"
+msgstr ""
+
+#: src/tray4hermes/state.py:242
+msgid "Gateway is running (waiting for gateway_state.json)"
+msgstr ""
+
+#: src/tray4hermes/state.py:244
+msgid "Gateway is starting…"
+msgstr ""
+
+#: src/tray4hermes/state.py:246
+msgid "Gateway service failed"
+msgstr ""
+
+#: src/tray4hermes/state.py:248
+msgid "Gateway is stopped"
+msgstr ""
+
+#: src/tray4hermes/state.py:249
+msgid "Gateway state is unreadable"
+msgstr ""
+
+#: src/tray4hermes/state.py:261
+#, python-brace-format
+msgid "hermes binary not found: {path}"
+msgstr ""
+
+#: src/tray4hermes/tray_settings.py:192
+msgid "tray4hermes Settings"
+msgstr ""
+
+#: src/tray4hermes/tray_settings.py:203
+msgid "Language"
+msgstr ""
+
+#: src/tray4hermes/tray_settings.py:206
+msgid "Interface language:"
+msgstr ""
+
+#: src/tray4hermes/tray_settings.py:234
+msgid "ℹ Language change is applied after saving."
+msgstr ""
+
+#: src/tray4hermes/tray_settings.py:240
+msgid "Log viewer defaults"
+msgstr ""
+
+#: src/tray4hermes/tray_settings.py:244
+msgid "Default line count:"
+msgstr ""
+
+#: src/tray4hermes/tray_settings.py:250
+msgid "0 = unlimited"
+msgstr ""
+
+#: src/tray4hermes/tray_settings.py:255
+msgid "Auto-scroll from start"
+msgstr ""
+
+#: src/tray4hermes/tray_settings.py:260
+msgid "Wrap from start"
+msgstr ""
+
+#: src/tray4hermes/tray_settings.py:265
+msgid "Default visible levels:"
 msgstr ""

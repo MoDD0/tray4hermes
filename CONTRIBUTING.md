@@ -188,16 +188,16 @@ The tray's own labels — menu entries, dialogs, tooltips — go through
 stdlib `gettext`. There is no runtime dependency and no build step
 beyond compiling the catalog.
 
-1. **Copy the Czech catalog as your starting point:**
+1. **Copy the template as your starting point:**
    ```bash
    mkdir -p src/tray4hermes/_locales/de/LC_MESSAGES
-   cp src/tray4hermes/_locales/cs/LC_MESSAGES/tray4hermes.po \
+   cp src/tray4hermes/_locales/tray4hermes.pot \
       src/tray4hermes/_locales/de/LC_MESSAGES/tray4hermes.po
    ```
-   Start from the `cs` catalog, **not** from
-   `_locales/tray4hermes.pot` — the template is stale and still
-   carries Czech `msgid`s from before the source strings were
-   flipped to English.
+   The template is regenerated from the source code by
+   `./scripts/i18n_compile.sh`, so it always carries the English
+   `msgid`s the runtime actually looks up, with empty `msgstr`s
+   waiting for you.
 
 2. **Translate the `msgstr` lines** and leave every `msgid` alone.
    Msgids are English by contract; `tests/test_i18n_runtime.py`
@@ -207,10 +207,12 @@ beyond compiling the catalog.
 3. **Update the catalog header** — `Language: de\n`, plus your name
    in `Last-Translator` if you want the credit.
 
-4. **Compile:** `./scripts/i18n_compile.sh`. This turns every `.po`
-   under `src/tray4hermes/_locales/` into the `.mo` that ships inside
-   the wheel. Commit both files — the `.mo` is package data, not a
-   build artefact we regenerate at install time.
+4. **Compile:** `./scripts/i18n_compile.sh`. This re-extracts the
+   `.pot` template from the sources (needs `xgettext`; skipped with a
+   warning if it is missing) and turns every `.po` under
+   `src/tray4hermes/_locales/` into the `.mo` that ships inside the
+   wheel. Commit both files — the `.mo` is package data, not a build
+   artefact we regenerate at install time.
 
 5. **Check it end to end:**
    ```bash

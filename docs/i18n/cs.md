@@ -437,7 +437,7 @@ tray4hermes/
 ├── scripts/
 │   ├── dev.sh                # instalace + testy pohodlně
 │   ├── i18n_build.py         # docs/i18n/*.md → README.md + docs/README.cs.md
-│   ├── i18n_compile.sh       # .po → .mo pro katalogy UI
+│   ├── i18n_compile.sh       # extrakce .pot + .po → .mo katalogy
 │   ├── i18n_lint.py          # parita nadpisů napříč překlady README
 │   └── versioning.py         # pomocník na SemVer bump
 ├── src/

@@ -60,24 +60,24 @@ msgstr ""
 "<b>Ovládá:</b> systemctl --user ({service})<br><br>"
 "Hermes Agent: github.com/NousResearch/hermes-agent"
 
-msgid "Config not found:\\n{config}"
-msgstr "Config nenalezen:\\n{config}"
+msgid "Config not found:\n{config}"
+msgstr "Config nenalezen:\n{config}"
 
 #: src/tray4hermes/app.py — profile change dialog
 msgid ""
-"Restart gateway with profile '{name}'?\\n\\n"
+"Restart gateway with profile '{name}'?\n\n"
 "Current session in Discord/Hermes Desktop may briefly disconnect."
 msgstr ""
-"Restartovat gateway s profilem '{name}'?\\n\\n"
+"Restartovat gateway s profilem '{name}'?\n\n"
 "Aktuální session v Discordu/Hermes Desktopu se může krátce odpojit."
 
 msgid ""
-"Cannot set profile '{name}':\\n\\n"
-"{out_msg}\\n\\n"
+"Cannot set profile '{name}':\n\n"
+"{out_msg}\n\n"
 "Profile must exist in {profiles_dir}/."
 msgstr ""
-"Nelze nastavit profil '{name}':\\n\\n"
-"{out_msg}\\n\\n"
+"Nelze nastavit profil '{name}':\n\n"
+"{out_msg}\n\n"
 "Profil musí existovat v {profiles_dir}/."
 
 #: src/tray4hermes/logs_view.py — log viewer toolbar
@@ -178,9 +178,6 @@ msgstr "0 = bez limitu"
 msgid "Show only lines from the last X minutes (0 = all)."
 msgstr "Zobrazit pouze řádky z posledních X minut (0 = vše)."
 
-msgid "ℹ Language change takes effect after restarting tray4hermes."
-msgstr "ℹ Změna jazyka se projeví po restartu tray4hermes."
-
 msgid "ℹ Language change is applied after saving."
 msgstr "ℹ Změna jazyka se použije po uložení."
 
@@ -219,8 +216,119 @@ msgid "Default visible levels:"
 msgstr "Výchozí viditelné úrovně:"
 
 #: src/tray4hermes/__main__.py
-msgid "tray4hermes is already running.\\nFind it in the system tray."
-msgstr "tray4hermes již běží.\\nNajdeš ho v systémové liště."
+msgid "tray4hermes is already running.\nFind it in the system tray."
+msgstr "tray4hermes již běží.\nNajdeš ho v systémové liště."
 
 msgid "Wrap"
 msgstr "Zalamovat"
+
+#: src/tray4hermes/app.py — tray menu actions
+msgid "▶  Start"
+msgstr "▶  Spustit"
+
+msgid "⏹  Stop"
+msgstr "⏹  Zastavit"
+
+msgid "🔄 Restart"
+msgstr "🔄 Restart"
+
+msgid "⚙  Hermes config"
+msgstr "⚙  Hermes config"
+
+msgid "💻  Hermes CLI"
+msgstr "💻  Hermes CLI"
+
+msgid "Model: {model}"
+msgstr "Model: {model}"
+
+#: src/tray4hermes/app.py — launcher failures
+msgid "Cannot read {path}: {error}"
+msgstr "Nelze číst {path}: {error}"
+
+msgid "Could not run {command}:\n{error}"
+msgstr "Nelze spustit {command}:\n{error}"
+
+msgid "No terminal emulator found. Tried: {tried}"
+msgstr "Nenalezen žádný terminálový emulátor. Zkoušeno: {tried}"
+
+#: src/tray4hermes/icons.py — tray tooltips
+msgid "Hermes Gateway — running and connected"
+msgstr "Hermes Gateway — běží a připojená"
+
+msgid "Hermes Gateway — running, waiting for connection"
+msgstr "Hermes Gateway — běží, čeká na připojení"
+
+msgid "Hermes Gateway — starting…"
+msgstr "Hermes Gateway — startuje…"
+
+msgid "Hermes Gateway — stopped"
+msgstr "Hermes Gateway — zastavena"
+
+msgid "Hermes Gateway — failed!"
+msgstr "Hermes Gateway — selhala!"
+
+msgid "Hermes Gateway — unknown state"
+msgstr "Hermes Gateway — neznámý stav"
+
+#: src/tray4hermes/state.py — status line under the tray menu
+msgid "Gateway is running and connected"
+msgstr "Gateway běží a je připojená"
+
+msgid "Gateway is running, waiting for connection"
+msgstr "Gateway běží, čeká na připojení"
+
+msgid "Gateway is running (from cached gateway_state.json)"
+msgstr "Gateway běží (z cache gateway_state.json)"
+
+msgid "Gateway is running (waiting for gateway_state.json)"
+msgstr "Gateway běží (čekám na gateway_state.json)"
+
+msgid "Gateway is starting…"
+msgstr "Gateway startuje…"
+
+msgid "Gateway service failed"
+msgstr "Gateway služba selhala"
+
+msgid "Gateway is stopped"
+msgstr "Gateway je zastavená"
+
+msgid "Gateway reports stopped"
+msgstr "Gateway hlásí stopped"
+
+msgid "Gateway state is unreadable"
+msgstr "Stav gateway je nečitelný"
+
+#: src/tray4hermes/state.py — config / profile errors
+msgid "(config unreadable)"
+msgstr "(config nečitelný)"
+
+msgid "(model not found)"
+msgstr "(model nenalezen)"
+
+msgid "(subprocess error: {error})"
+msgstr "(chyba subprocesu: {error})"
+
+msgid "hermes binary not found: {path}"
+msgstr "binárka hermes nenalezena: {path}"
+
+#: src/tray4hermes/logs_view.py — toolbar and status bar
+msgid "Filter: "
+msgstr "Filtr: "
+
+msgid "Auto-scroll"
+msgstr "Auto-scroll"
+
+msgid "Find next"
+msgstr "Najít další"
+
+msgid "Find prev"
+msgstr "Najít předchozí"
+
+msgid "Ctrl+F"
+msgstr "Ctrl+F"
+
+msgid "ERR"
+msgstr "ERR"
+
+msgid "WARN"
+msgstr "WARN"

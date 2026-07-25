@@ -1,7 +1,7 @@
 # tray4hermes
 
 <!-- tray4hermes:version -->
-[![version: 2.0.12](https://img.shields.io/badge/version-2.0.12-blue.svg)](https://github.com/MoDD0/tray4hermes/releases)
+[![version: 2.0.13](https://img.shields.io/badge/version-2.0.13-blue.svg)](https://github.com/MoDD0/tray4hermes/releases)
 [![CI](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml/badge.svg)](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -441,7 +441,7 @@ tray4hermes/
 ├── scripts/
 │   ├── dev.sh                # install + test convenience
 │   ├── i18n_build.py         # docs/i18n/*.md → README.md + docs/README.cs.md
-│   ├── i18n_compile.sh       # .po → .mo for the UI catalogs
+│   ├── i18n_compile.sh       # .pot extraction + .po → .mo catalogs
 │   ├── i18n_lint.py          # heading parity across README translations
 │   └── versioning.py         # SemVer bump helper
 ├── src/

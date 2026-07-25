@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (
 
 from tray4hermes import __version__
 from tray4hermes import paths as _paths
-from tray4hermes.icons import STATE_COLORS, STATE_TOOLTIPS, brand_icon, make_icon
+from tray4hermes.icons import STATE_COLORS, brand_icon, make_icon, state_tooltip
 
 # After `i18n.install(...)` runs (in __main__), `tray4hermes.i18n._`
 # is bound to the active translation. We use a *dynamic* lookup so
@@ -102,7 +102,7 @@ class HermesTray:
         # already has a glyph. Without this, the tray may register
         # empty and be ignored by KDE's StatusNotifierWatcher.
         self._tray.setIcon(self._icons["unknown"])
-        self._tray.setToolTip(STATE_TOOLTIPS["unknown"])
+        self._tray.setToolTip(state_tooltip("unknown"))
         # Tooltip with menu must also exist for some shells
         self._tray.activated.connect(self._on_activated)
 
@@ -137,9 +137,10 @@ class HermesTray:
         self._status_action.setEnabled(False)
         menu.addAction(self._status_action)
 
-        # ``Model: ?`` — shown in the status block before we've read
-        # the config. ``?`` is intentional, not a translation slot.
-        self._model_action = QAction(_("Model: ?"), menu)
+        # Placeholder shown in the status block before we've read the
+        # config. Same msgid as the refreshed line below, so the label
+        # keeps one translation instead of two that can drift apart.
+        self._model_action = QAction(_("Model: {model}").format(model="?"), menu)
         self._model_action.setEnabled(False)
         menu.addAction(self._model_action)
 
@@ -468,10 +469,12 @@ class HermesTray:
         if state.code != self._current_code:
             self._current_code = state.code
             self._tray.setIcon(self._icons.get(state.code, self._icons["unknown"]))
-            self._tray.setToolTip(STATE_TOOLTIPS.get(state.code, state.label))
+            self._tray.setToolTip(state_tooltip(state.code))
             self._status_action.setText(state.label)
 
-        self._model_action.setText(f"Model: {read_active_model(_paths.config_yaml())}")
+        self._model_action.setText(
+            _("Model: {model}").format(model=read_active_model(_paths.config_yaml()))
+        )
 
         is_running = state.code in (ACTIVE, WARMING, ACTIVATING)
         self._start_action.setEnabled(not is_running)

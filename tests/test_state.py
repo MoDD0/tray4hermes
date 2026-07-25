@@ -187,7 +187,7 @@ class TestListProfiles:
 
 class TestReadActiveModel:
     def test_missing_file_returns_placeholder(self, hermes_home: Path) -> None:
-        assert read_active_model(hermes_home / "config.yaml") == "(config nečitelný)"
+        assert read_active_model(hermes_home / "config.yaml") == "(config unreadable)"
 
     def test_extracts_default_and_provider(self, hermes_home: Path) -> None:
         (hermes_home / "config.yaml").write_text(
@@ -223,7 +223,7 @@ class TestReadActiveModel:
 
     def test_no_model_block(self, hermes_home: Path) -> None:
         (hermes_home / "config.yaml").write_text("other_key: value\n")
-        assert read_active_model(hermes_home / "config.yaml") == "(model nenalezen)"
+        assert read_active_model(hermes_home / "config.yaml") == "(model not found)"
 
 
 # ── Aggregation: the one function that matters ─────────────────────────────
