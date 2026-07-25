@@ -46,6 +46,15 @@ def bump_version(version: str, level: str) -> str:
     raise ValueError(f"invalid bump level: {level!r}")
 
 
+def version_tuple(version: str) -> tuple[int, int, int]:
+    """Numeric form for comparison. `2.0.100` outranks `2.0.99`."""
+    try:
+        major, minor, patch = (int(part) for part in version.split("."))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"invalid SemVer version: {version!r}") from exc
+    return major, minor, patch
+
+
 def current_version(source: str) -> str:
     match = _VERSION_RE.search(source)
     if not match:
@@ -105,6 +114,39 @@ def prepare_commit(message_file: Path) -> int:
     return 0
 
 
+def check_against(ref: str) -> int:
+    """CI gate: refuse a version older than the one already on `ref`.
+
+    Deliberately independent of the commit-message policy. On
+    2026-07-24 the version went 2.0.11 → 2.0.6 and nothing noticed,
+    because no gate of any kind was running. Whatever the bump rules
+    say, the number must not move backwards.
+
+    A missing `ref` is not a violation — before the first push there is
+    no `origin/main` to compare against — so it reports and passes.
+    """
+    try:
+        base = current_version(_git("show", f"{ref}:src/tray4hermes/__init__.py"))
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"versioning: skipping downgrade check ({ref}: {exc})", file=sys.stderr)
+        return 0
+
+    try:
+        current = current_version(VERSION_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"versioning error: {exc}", file=sys.stderr)
+        return 1
+
+    if version_tuple(current) < version_tuple(base):
+        print(
+            f"versioning error: {current} is older than {ref} ({base}); "
+            "versions must never move backwards",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 def bump_file(level: str, *, path: Path = VERSION_FILE) -> tuple[str, str]:
     source = path.read_text(encoding="utf-8")
     old = current_version(source)
@@ -117,9 +159,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Bump tray4hermes Semantic Version")
     parser.add_argument("level", choices=("patch", "minor", "major"), nargs="?")
     parser.add_argument("--prepare-commit-msg", type=Path, metavar="FILE")
+    parser.add_argument(
+        "--check-against",
+        metavar="REF",
+        help="fail if the working version is older than the one on REF (e.g. origin/main)",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
+    if args.check_against:
+        return check_against(args.check_against)
     if args.prepare_commit_msg:
         return prepare_commit(args.prepare_commit_msg)
     if args.level is None:

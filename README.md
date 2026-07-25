@@ -2,6 +2,7 @@
 
 <!-- tray4hermes:version -->
 [![version: 2.0.12](https://img.shields.io/badge/version-2.0.12-blue.svg)](https://github.com/MoDD0/tray4hermes/releases)
+[![CI](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml/badge.svg)](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -384,8 +385,16 @@ state and re-renders the tray icon.
 ./scripts/dev.sh tests/test_state.py -v   # specific file
 ```
 
-Tests use `QT_QPA_PLATFORM=offscreen` so they run in CI / headless
-environments without a display server.
+Tests use `QT_QPA_PLATFORM=offscreen` (set in `tests/conftest.py`) so
+they run headless, without a display server.
+
+### Continuous integration
+
+[GitHub Actions](.github/workflows/ci.yml) runs on every push to `main`
+and on every pull request: lint (`ruff check` + `ruff format --check`)
+and the full test suite on Python 3.11, 3.12 and 3.13 — the versions
+this package claims to support. A separate job refuses any commit that
+lowers the package version.
 
 ### Lint & format
 

@@ -87,6 +87,70 @@ def test_required_version_rejects_wrong_manual_bump(versioning_module) -> None:
 
 
 @pytest.fixture
+def downgrade_gate(versioning_module, tmp_path: Path, monkeypatch):
+    """Run `check_against` with a chosen version on the ref and in the tree."""
+    version_file = tmp_path / "src" / "tray4hermes" / "__init__.py"
+    version_file.parent.mkdir(parents=True)
+
+    def run(*, on_ref: str | None, working: str) -> int:
+        version_file.write_text(f'__version__ = "{working}"\n', encoding="utf-8")
+
+        def fake_git(*args: str) -> str:
+            if on_ref is None:
+                raise RuntimeError("fatal: invalid object name 'origin/main'")
+            return f'__version__ = "{on_ref}"\n'
+
+        monkeypatch.setattr(versioning_module, "VERSION_FILE", version_file)
+        monkeypatch.setattr(versioning_module, "_git", fake_git)
+        return versioning_module.check_against("origin/main")
+
+    return run
+
+
+class TestDowngradeGate:
+    """The gate that would have caught 2.0.11 → 2.0.6.
+
+    Independent of the commit-message rules: whatever the bump policy
+    says, the number must never move backwards.
+    """
+
+    @pytest.mark.parametrize(
+        ("on_ref", "working"),
+        [
+            ("2.0.11", "2.0.12"),
+            ("2.0.11", "2.1.0"),
+            ("2.0.11", "3.0.0"),
+            ("2.0.11", "2.0.11"),  # docs-only change, no bump
+            ("2.0.99", "2.0.100"),  # unbounded patch slot, not a string compare
+        ],
+    )
+    def test_forward_or_unchanged_passes(self, downgrade_gate, on_ref: str, working: str) -> None:
+        assert downgrade_gate(on_ref=on_ref, working=working) == 0
+
+    @pytest.mark.parametrize(
+        ("on_ref", "working"),
+        [
+            ("2.0.11", "2.0.6"),  # the actual incident
+            ("2.1.0", "2.0.12"),
+            ("3.0.0", "2.9.9"),
+            ("2.0.100", "2.0.99"),
+        ],
+    )
+    def test_going_backwards_fails(self, downgrade_gate, capsys, on_ref: str, working: str) -> None:
+        code = downgrade_gate(on_ref=on_ref, working=working)
+
+        assert code == 1
+        err = capsys.readouterr().err
+        assert working in err and on_ref in err, f"the message must name both versions: {err!r}"
+
+    def test_missing_ref_does_not_block(self, downgrade_gate, capsys) -> None:
+        """Before the first push there is no `origin/main` to compare
+        against. That is not a policy violation and must not fail CI."""
+        assert downgrade_gate(on_ref=None, working="2.0.12") == 0
+        assert capsys.readouterr().err, "skipping the check should still be visible"
+
+
+@pytest.fixture
 def commit_gate(versioning_module, tmp_path: Path, monkeypatch):
     """Run `prepare_commit` against a fake repo.
 
