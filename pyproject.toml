@@ -101,9 +101,9 @@ addopts = [
   "--strict-markers",
   "--strict-config",
 ]
-# Qt tests need an offscreen platform in headless environments (CI, sandbox).
-# `pytest-qt` reads this automatically.
-env = ["QT_QPA_PLATFORM = offscreen"]
+# Qt needs an offscreen platform in headless environments (CI, sandbox).
+# Set in `tests/conftest.py` at import time — doing it here would need
+# the `pytest-env` plugin, which this project does not install.
 
 # ── ruff ────────────────────────────────────────────────────────────────────
 [tool.ruff]

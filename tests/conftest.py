@@ -13,6 +13,16 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+# Qt must not need a display server. This has to happen at import time:
+# conftest is loaded before any test module, and the value is read when
+# the first QApplication is constructed. `setdefault` so a developer can
+# still force `QT_QPA_PLATFORM=xcb` to watch a dialog on screen.
+#
+# It used to live in `pyproject.toml` as `env = [...]`, a key owned by
+# `pytest-env` — a plugin this project does not install. The setting
+# silently did nothing and pytest warned about it on every run.
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
 
 @pytest.fixture(autouse=True)
 def _isolate_hermes_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

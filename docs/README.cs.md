@@ -2,6 +2,7 @@
 
 <!-- tray4hermes:version -->
 [![version: 2.0.12](https://img.shields.io/badge/version-2.0.12-blue.svg)](https://github.com/MoDD0/tray4hermes/releases)
+[![CI](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml/badge.svg)](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -385,8 +386,16 @@ umí, je spadnout a nechat se restartovat watchdogem — načež jen přečte
 ./scripts/dev.sh tests/test_state.py -v   # konkrétní soubor
 ```
 
-Testy běží s `QT_QPA_PLATFORM=offscreen`, takže projdou v CI i na stroji
-bez display serveru.
+Testy běží s `QT_QPA_PLATFORM=offscreen` (nastaveno
+v `tests/conftest.py`), takže projdou bezhlavě, bez display serveru.
+
+### Průběžná integrace
+
+[GitHub Actions](.github/workflows/ci.yml) běží při každém pushi do
+`main` a u každého pull requestu: lint (`ruff check` +
+`ruff format --check`) a celá sada testů na Pythonu 3.11, 3.12 a 3.13 —
+tedy na verzích, ke kterým se balík hlásí. Samostatná úloha odmítne
+každý commit, který sníží verzi balíku.
 
 ### Lint & formát
 

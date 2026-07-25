@@ -238,6 +238,11 @@ For non-translation PRs, follow the broader workflow:
    uv run ruff format src tests # format
    uv run bandit -c pyproject.toml -r src  # security scan
    ```
+   CI re-runs the tests and the two ruff gates on Python 3.11, 3.12 and
+   3.13 for every pull request, so a red pipeline is not a surprise —
+   but finding it locally is faster. The security scan is not part of
+   CI; run it yourself when you touch anything that spawns a process or
+   reads a file path.
 
 ## Versioning and completed-work commits
 
@@ -266,10 +271,13 @@ Before committing completed work:
 4. Stage the implementation, tests, and version bump together in one commit.
 5. Do not create a tag or GitHub release unless explicitly requested.
 
-> ⚠️ The automated bump check is currently being reworked, so treat
-> step 2 as manual and don't assume a hook will catch a missing bump.
-> The version has already gone **backwards** once because nothing was
-> enforcing it.
+> ⚠️ Step 2 is **manual**. No hook infers the bump from your commit
+> message, so nothing will stop a `fix:` that forgets to bump.
+>
+> CI does enforce one half of it: a pull request whose version is
+> *lower* than the one on `main` fails. That is the failure that
+> actually happened here — the version went 2.0.11 → 2.0.6 while no
+> gate of any kind was running.
 
 The package version has a single source of truth:
 `src/tray4hermes/__init__.py::__version__`.
