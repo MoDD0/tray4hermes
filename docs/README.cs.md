@@ -1,7 +1,7 @@
 # tray4hermes (česky)
 
 <!-- tray4hermes:version -->
-[![version: 2.0.15](https://img.shields.io/badge/version-2.0.15-blue.svg)](https://github.com/MoDD0/tray4hermes)
+[![version: 2.0.16](https://img.shields.io/badge/version-2.0.16-blue.svg)](https://github.com/MoDD0/tray4hermes)
 [![CI](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml/badge.svg)](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -77,7 +77,9 @@ Prohlížeč čte `~/.hermes/logs/gateway.log` a nabízí:
 - **Barevné úrovně logu**: `DEBUG` šedá, `INFO` bílá, `WARNING` žlutá,
   `ERROR` červená, `CRITICAL` červená + zvýraznění celého řádku
 - **Sloupec s čísly řádků** jako v Qt Creatoru / VS Code
-- **Filtry per úroveň** (přepínače na toolbaru) — vidíš jen to, co chceš
+- **Filtry per úroveň** na vlastním řádku toolbaru, takže spolu s ovládáním
+  nad nimi zůstávají vidět místo skládání do přetečení `»` — vidíš jen to,
+  co chceš
 - **Přepínač TRACEBACK** — samostatná kategorie pro stack trace; vypni ji
   a uvidíš jen zprávy, zapni ji a máš obojí
 - **Filtr časového okna** (Vše / 5m / 15m / 1h / 6h / 24h) — zobrazí jen

@@ -665,7 +665,7 @@ class LogDialog(QDialog):
         if self._settings.window_geometry is not None:
             self.restoreGeometry(self._settings.window_geometry)
 
-        # Layout: [toolbar] [editor + gutter] [find bar] [statusbar]
+        # Layout: [toolbar] [filter toolbar] [editor + gutter] [find bar] [statusbar]
         self._build_editor()  # must be before _build_toolbar (which references self._editor)
         self._build_toolbar()
         self._build_find_bar()
@@ -673,6 +673,7 @@ class LogDialog(QDialog):
 
         main_layout = QVBoxLayout(self)
         main_layout.addWidget(self._toolbar)
+        main_layout.addWidget(self._filter_toolbar)
         main_layout.addWidget(self._editor)
         main_layout.addWidget(self._find_bar)
         main_layout.addWidget(self._status)
@@ -786,28 +787,6 @@ class LogDialog(QDialog):
         self._btn_wrap.toggled.connect(self._on_wrap_toggle)
         tb.addAction(self._btn_wrap)
 
-        tb.addSeparator()
-
-        # Level filters
-        tb.addWidget(QLabel(_("Filter: ")))
-        self._level_checkboxes: dict[str, QCheckBox] = {}
-        for level in ("ERROR", "WARNING", "INFO", "DEBUG", "CRITICAL", "TRACE"):
-            cb = QCheckBox(level)
-            cb.setChecked(level in self._settings.show_levels)
-            cb.setStyleSheet(f"QCheckBox {{ color: {LEVEL_COLORS[level].name()}; }}")
-            tb.addWidget(cb)
-            self._level_checkboxes[level] = cb
-
-        # Traceback toggle — separate category from log levels. Defaults to
-        # ON because stack-trace continuations are usually what you want
-        # to see alongside the triggering ERROR line.
-        self._tb_checkbox = QCheckBox("TRACEBACK")
-        self._tb_checkbox.setChecked(self._settings.show_tracebacks)
-        self._tb_checkbox.setStyleSheet(
-            f"QCheckBox {{ color: {LEVEL_COLORS['TRACEBACK'].name()}; font-weight: bold; }}"
-        )
-        tb.addWidget(self._tb_checkbox)
-
         # Search deliberately lives outside this toolbar — see
         # ``_build_find_bar``.
         tb.addSeparator()
@@ -820,6 +799,44 @@ class LogDialog(QDialog):
         tb.addAction(QAction(_("Settings"), self, triggered=self._open_settings))
 
         self._toolbar = tb
+        self._build_filter_toolbar()
+
+    def _build_filter_toolbar(self) -> None:
+        """Level filters on a row of their own.
+
+        Together with the controls above they need well over 1900 px.
+        Qt never shrinks a toolbar — it pushes the tail into an
+        extension popup that starts closed, so on a single row
+        everything from `INFO` rightwards was off screen at the default
+        900 px, *Settings* included. Two rows cost ~30 px of log height
+        and keep every control reachable.
+        """
+        tb = QToolBar("Log filter toolbar")
+        tb.setMovable(False)
+        tb.setIconSize(QSize(16, 16))
+
+        tb.addWidget(QLabel(_("Filter: ")))
+        self._level_checkboxes: dict[str, QCheckBox] = {}
+        for level in ("ERROR", "WARNING", "INFO", "DEBUG", "CRITICAL", "TRACE"):
+            cb = QCheckBox(level)
+            cb.setChecked(level in self._settings.show_levels)
+            cb.setStyleSheet(f"QCheckBox {{ color: {LEVEL_COLORS[level].name()}; }}")
+            tb.addWidget(cb)
+            self._level_checkboxes[level] = cb
+
+        tb.addSeparator()
+
+        # Traceback toggle — separate category from log levels. Defaults to
+        # ON because stack-trace continuations are usually what you want
+        # to see alongside the triggering ERROR line.
+        self._tb_checkbox = QCheckBox("TRACEBACK")
+        self._tb_checkbox.setChecked(self._settings.show_tracebacks)
+        self._tb_checkbox.setStyleSheet(
+            f"QCheckBox {{ color: {LEVEL_COLORS['TRACEBACK'].name()}; font-weight: bold; }}"
+        )
+        tb.addWidget(self._tb_checkbox)
+
+        self._filter_toolbar = tb
 
     def _build_find_bar(self) -> None:
         """A collapsible search row of its own, below the editor.
