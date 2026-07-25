@@ -71,7 +71,9 @@ The log viewer reads `~/.hermes/logs/gateway.log` and provides:
 - **Coloured log levels**: `DEBUG` gray, `INFO` white, `WARNING` yellow,
   `ERROR` red, `CRITICAL` red + full-row highlight
 - **Line-number gutter** like Qt Creator / VS Code
-- **Per-level filters** (toolbar toggles) — show only what you want
+- **Per-level filters** on a toolbar row of their own, so they and the
+  controls above them stay visible instead of collapsing into the `»`
+  overflow popup — show only what you want
 - **TRACEBACK toggle** — a separate category for stack traces; turn
   it off to see only messages, or on to keep both
 - **Time-window filter** (All / 5m / 15m / 1h / 6h / 24h) — show only

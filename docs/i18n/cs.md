@@ -72,7 +72,9 @@ Prohlížeč čte `~/.hermes/logs/gateway.log` a nabízí:
 - **Barevné úrovně logu**: `DEBUG` šedá, `INFO` bílá, `WARNING` žlutá,
   `ERROR` červená, `CRITICAL` červená + zvýraznění celého řádku
 - **Sloupec s čísly řádků** jako v Qt Creatoru / VS Code
-- **Filtry per úroveň** (přepínače na toolbaru) — vidíš jen to, co chceš
+- **Filtry per úroveň** na vlastním řádku toolbaru, takže spolu s ovládáním
+  nad nimi zůstávají vidět místo skládání do přetečení `»` — vidíš jen to,
+  co chceš
 - **Přepínač TRACEBACK** — samostatná kategorie pro stack trace; vypni ji
   a uvidíš jen zprávy, zapni ji a máš obojí
 - **Filtr časového okna** (Vše / 5m / 15m / 1h / 6h / 24h) — zobrazí jen
