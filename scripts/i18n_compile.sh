@@ -23,6 +23,32 @@ cd "$(dirname "$0")/.."
 shopt -s nullglob
 errors=0
 
+# 0. Refresh the .pot template from the source code.
+#
+# The template is what someone starting a new language copies. It has
+# to carry the *English* msgids the runtime actually looks up — a
+# template written in another language yields a catalogue that never
+# matches a single lookup, which is exactly the state it was left in.
+# xgettext is a gettext-tools binary and may be absent on a machine
+# that only wants to run the app, so a missing one is a warning, not
+# a failure: the shipped .po/.mo still compile without it.
+POT="src/tray4hermes/_locales/tray4hermes.pot"
+if command -v xgettext >/dev/null 2>&1; then
+    printf 'extract:            %-30s -> %s\n' "src/tray4hermes/*.py" "$POT"
+    xgettext \
+        --language=Python \
+        --keyword=_ \
+        --from-code=UTF-8 \
+        --package-name=tray4hermes \
+        --copyright-holder="MoDDO" \
+        --msgid-bugs-address="https://github.com/MoDD0/tray4hermes/issues" \
+        --add-comments=TRANSLATORS \
+        -o "$POT" \
+        src/tray4hermes/*.py || errors=$((errors + 1))
+else
+    echo "warning: xgettext not found — $POT left as is" >&2
+fi
+
 # 1. Package-data translations (ship in the wheel).
 for po_file in src/tray4hermes/_locales/*/LC_MESSAGES/*.po; do
     mo_file="${po_file%.po}.mo"

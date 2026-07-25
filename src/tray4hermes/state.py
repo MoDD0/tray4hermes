@@ -26,6 +26,20 @@ from tray4hermes.paths import (
     TRAY_STATE_VERSION,
 )
 
+# Dynamic gettext lookup — see the same wrapper in app.py. Every string
+# below is built inside a function, so it resolves against whatever
+# language is installed at call time, not at import time.
+try:
+    from tray4hermes import i18n as _i18n_mod
+
+    def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
+        """Dynamic gettext wrapper — looks up i18n._ on every call."""
+        return _i18n_mod._(s)  # type: ignore[attr-defined]
+except ImportError:
+
+    def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
+        return s
+
 # ── State codes ─────────────────────────────────────────────────────────────
 # All six are mutually exclusive. UI maps them 1:1 to icons + colors.
 
@@ -141,7 +155,7 @@ def read_active_model(config_yaml: Path) -> str:
     try:
         text = config_yaml.read_text()
     except OSError:
-        return "(config nečitelný)"
+        return _("(config unreadable)")
 
     model, provider = "", ""
     in_model = False
@@ -158,7 +172,7 @@ def read_active_model(config_yaml: Path) -> str:
             elif stripped.startswith("provider:"):
                 provider = stripped.split(":", 1)[1].strip()
     if not model:
-        return "(model nenalezen)"
+        return _("(model not found)")
     return f"{model} ({provider})" if provider else model
 
 
@@ -173,7 +187,7 @@ def _run(cmd: list[str], timeout: int = 10) -> tuple[int, str]:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)  # noqa: S603
         return r.returncode, (r.stdout + r.stderr).strip()
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
-        return 1, f"(subprocess error: {exc})"
+        return 1, _("(subprocess error: {error})").format(error=exc)
 
 
 def systemd_is_active() -> str | None:
@@ -205,13 +219,13 @@ def aggregate_state() -> GatewayState:
     gw = read_gateway_state_file()
     if gw is not None:
         if gw.get("running") is False:
-            return GatewayState(INACTIVE, "Gateway hlásí stopped")
+            return GatewayState(INACTIVE, _("Gateway reports stopped"))
         # Real gateway_state.json schema uses `platforms.{name}.state == "connected"`,
         # not a top-level `discord: true`. The `discord` key in some legacy formats
         # was a bool — handle both.
         if gw.get("discord") or gw.get("platforms"):
-            return GatewayState(ACTIVE, "Gateway běží a je připojená")
-        return GatewayState(WARMING, "Gateway běží, čeká na připojení")
+            return GatewayState(ACTIVE, _("Gateway is running and connected"))
+        return GatewayState(WARMING, _("Gateway is running, waiting for connection"))
 
     # Primary state file is stale/missing. Try a one-off relaxed read —
     # a recent file with a connected Discord platform is still trustworthy
@@ -221,18 +235,18 @@ def aggregate_state() -> GatewayState:
     if gw_stale is not None and (gw_stale.get("discord") or gw_stale.get("platforms")):
         s = systemd_is_active()
         if s == ACTIVE:
-            return GatewayState(ACTIVE, "Gateway běží (z cache gateway_state.json)")
+            return GatewayState(ACTIVE, _("Gateway is running (from cached gateway_state.json)"))
 
     s = systemd_is_active()
     if s == ACTIVE:
-        return GatewayState(WARMING, "Gateway běží (čekám na gateway_state.json)")
+        return GatewayState(WARMING, _("Gateway is running (waiting for gateway_state.json)"))
     if s == ACTIVATING:
-        return GatewayState(ACTIVATING, "Gateway startuje…")
+        return GatewayState(ACTIVATING, _("Gateway is starting…"))
     if s == FAILED:
-        return GatewayState(FAILED, "Gateway služba selhala")
+        return GatewayState(FAILED, _("Gateway service failed"))
     if s == INACTIVE:
-        return GatewayState(INACTIVE, "Gateway je zastavená")
-    return GatewayState(UNKNOWN, "Stav gateway je nečitelný")
+        return GatewayState(INACTIVE, _("Gateway is stopped"))
+    return GatewayState(UNKNOWN, _("Gateway state is unreadable"))
 
 
 # ── Profile switching (single high-level action used by the UI) ────────────
@@ -244,6 +258,6 @@ def switch_profile(name: str, *, hermes_bin: Path | None = None) -> tuple[bool, 
     """
     bin_path = hermes_bin if hermes_bin is not None else _paths.hermes_bin()
     if not bin_path.exists():
-        return False, f"hermes bin not found: {bin_path}"
+        return False, _("hermes binary not found: {path}").format(path=bin_path)
     code, out = _run([str(bin_path), "profile", "use", name], timeout=15)
     return code == 0, out

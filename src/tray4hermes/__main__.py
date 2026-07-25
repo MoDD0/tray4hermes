@@ -27,6 +27,17 @@ from tray4hermes import paths as _paths
 from tray4hermes.i18n import available_languages
 from tray4hermes.i18n import install as _i18n_install
 
+
+# Dynamic gettext lookup — see the same wrapper in app.py. Here it also
+# has to be dynamic in time: this module *is* what calls ``install()``,
+# so every ``_()`` below necessarily runs after the binding exists.
+def _(s: str) -> str:
+    """Dynamic gettext wrapper — looks up i18n._ on every call."""
+    from tray4hermes import i18n as _i18n_mod
+
+    return _i18n_mod._(s)
+
+
 # Sentinel for ``--language`` used without a value: "tell me which
 # languages this build ships". A real language code can never collide
 # with it — ISO 639-1 codes are two letters.
@@ -149,7 +160,7 @@ def main() -> int:
             # TRANSLATORS: body of a dialog shown when another instance
             # of the tray is already running (we hold a single-instance
             # lock and refuse to start a second).
-            "tray4hermes is already running.\nFind it in the system tray.",
+            _("tray4hermes is already running.\nFind it in the system tray."),
         )
         return 2
 

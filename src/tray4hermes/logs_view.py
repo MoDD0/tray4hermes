@@ -727,8 +727,7 @@ class LogDialog(QDialog):
         self._max_lines_spin.setAccelerated(True)
         self._max_lines_spin.setValue(self._settings.max_lines)
         self._max_lines_spin.setToolTip(
-            "Maximální počet řádků v bufferu (0 = bez limitu).\n"
-            "Starší řádky jsou průběžně odstraňovány."
+            _("0 = unlimited (all lines). At higher values, older lines are gradually removed.")
         )
         self._max_lines_spin.valueChanged.connect(self._on_max_lines_changed)
         tb.addWidget(self._max_lines_spin)
@@ -743,7 +742,7 @@ class LogDialog(QDialog):
         # translated string would have to match an English key in
         # the dict; this is fragile across locales.
         self._time_keys = ["all", "5m", "15m", "1h", "6h", "24h"]
-        self._time_combo.addItems([_(k) if k == "all" else k for k in self._time_keys])
+        self._time_combo.addItems([_("All") if k == "all" else k for k in self._time_keys])
         # Map stable internal key → minutes. 0 = no filter.
         self._time_choices = {"all": 0, "5m": 5, "15m": 15, "1h": 60, "6h": 360, "24h": 1440}
         # Pre-select based on settings
@@ -763,8 +762,10 @@ class LogDialog(QDialog):
             _("Reverse"), self, checkable=True, checked=self._settings.reverse_order
         )
         self._btn_reverse.setToolTip(
-            "Při zapnutí: nejnovější řádky nahoře (journalctl styl).\n"
-            "Při vypnutí: nejnovější dole (tail -f styl)."
+            _(
+                "Journalctl style — newest lines at top, oldest at bottom. "
+                "Default: newest at bottom (tail -f style)."
+            )
         )
         self._btn_reverse.toggled.connect(self._on_reverse_toggle)
         tb.addAction(self._btn_reverse)
@@ -786,7 +787,7 @@ class LogDialog(QDialog):
         tb.addSeparator()
 
         # Level filters
-        tb.addWidget(QLabel("Filtr: "))
+        tb.addWidget(QLabel(_("Filter: ")))
         self._level_checkboxes: dict[str, QCheckBox] = {}
         for level in ("ERROR", "WARNING", "INFO", "DEBUG", "CRITICAL", "TRACE"):
             cb = QCheckBox(level)
@@ -996,7 +997,7 @@ class LogDialog(QDialog):
         self._status.setText(
             f"  {_('Line')} {line}  {_('Column')} {col}    "
             f"{_('Visible')}: {total}    {_('ERR')}: {errors}    {_('WARN')}: {warnings}    "
-            f"{_('Auto-scroll')}: {'ZAP' if self._settings.auto_scroll else 'VYP'}"
+            f"{_('Auto-scroll')}: {_('ON') if self._settings.auto_scroll else _('OFF')}"
         )
 
     # ── Event handlers ────────────────────────────────────────────────────
