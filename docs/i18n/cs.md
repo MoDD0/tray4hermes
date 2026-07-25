@@ -81,7 +81,9 @@ Prohlížeč čte `~/.hermes/logs/gateway.log` a nabízí:
   každý nový záznam se objeví jako první
 - **Spinbox Max řádků** — rolující buffer (0 = neomezeno). Krok 1;
   libovolnou hodnotu lze napsat ručně
-- **Hledání** (`Ctrl+F` → `F3` další, `Shift+F3` předchozí, `Esc` zavřít)
+- **Hledání** ve vysouvací liště pod logem (`Ctrl+F` ji otevře a zafokusuje,
+  `F3` další, `Shift+F3` předchozí, `Esc` zavře). Sedí záměrně mimo toolbar,
+  takže zůstává dostupná při jakékoliv šířce okna
 - **Přepínač auto-scrollu** (výchozí ZAP; VYP = zachovat pozici při
   refreshi). Při zkoumání logu si viewer ručně vybranou pozici udrží
   i se zapnutým auto-scrollem; živý okraj sleduje jen tehdy, když na

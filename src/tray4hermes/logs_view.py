@@ -665,14 +665,16 @@ class LogDialog(QDialog):
         if self._settings.window_geometry is not None:
             self.restoreGeometry(self._settings.window_geometry)
 
-        # Layout: [toolbar] [editor + gutter] [statusbar]
+        # Layout: [toolbar] [editor + gutter] [find bar] [statusbar]
         self._build_editor()  # must be before _build_toolbar (which references self._editor)
         self._build_toolbar()
+        self._build_find_bar()
         self._build_statusbar()
 
         main_layout = QVBoxLayout(self)
         main_layout.addWidget(self._toolbar)
         main_layout.addWidget(self._editor)
+        main_layout.addWidget(self._find_bar)
         main_layout.addWidget(self._status)
 
         # Periodic refresh
@@ -806,20 +808,8 @@ class LogDialog(QDialog):
         )
         tb.addWidget(self._tb_checkbox)
 
-        tb.addSeparator()
-
-        # Search
-        tb.addWidget(QLabel(_("Search: ")))
-        self._search = QLineEdit()
-        self._search.setPlaceholderText(_("Ctrl+F"))
-        self._search.setMaximumWidth(220)
-        self._search.returnPressed.connect(lambda: self._find())
-        tb.addWidget(self._search)
-
-        btn_next = QPushButton(_("Find"))
-        btn_next.clicked.connect(lambda: self._find())
-        tb.addWidget(btn_next)
-
+        # Search deliberately lives outside this toolbar — see
+        # ``_build_find_bar``.
         tb.addSeparator()
 
         # Copy / Clear / Refresh / Settings
@@ -830,6 +820,46 @@ class LogDialog(QDialog):
         tb.addAction(QAction(_("Settings"), self, triggered=self._open_settings))
 
         self._toolbar = tb
+
+    def _build_find_bar(self) -> None:
+        """A collapsible search row of its own, below the editor.
+
+        Search used to be the tail end of the main toolbar. That toolbar
+        asks for roughly 1975 px to lay out in full, so at the default
+        900×500 everything past the level filters spilled into the
+        toolbar's extension popup — and a widget parked in an unopened
+        popup is not visible, which makes ``setFocus()`` a no-op. Ctrl+F
+        did nothing at all until the window was dragged wide enough.
+
+        A separate row cannot overflow: it holds four widgets and is
+        hidden until asked for, so it costs no vertical space either.
+        """
+        self._find_bar = QWidget(self)
+        row = QHBoxLayout(self._find_bar)
+        row.setContentsMargins(4, 2, 4, 2)
+
+        row.addWidget(QLabel(_("Search: ")))
+
+        self._search = QLineEdit()
+        self._search.setPlaceholderText(_("Ctrl+F"))
+        self._search.returnPressed.connect(lambda: self._find())
+        row.addWidget(self._search, stretch=1)
+
+        btn_prev = QPushButton(_("Find prev"))
+        btn_prev.clicked.connect(lambda: self._find(backward=True))
+        row.addWidget(btn_prev)
+
+        btn_next = QPushButton(_("Find next"))
+        btn_next.clicked.connect(lambda: self._find(backward=False))
+        row.addWidget(btn_next)
+
+        btn_close = QPushButton("✕")
+        btn_close.setToolTip(_("Close the find bar (Esc)"))
+        btn_close.setFixedWidth(28)
+        btn_close.clicked.connect(self._close_search)
+        row.addWidget(btn_close)
+
+        self._find_bar.setVisible(False)
 
     def _build_editor(self) -> None:
         self._editor = LogTextEdit(self)
@@ -1054,12 +1084,19 @@ class LogDialog(QDialog):
         return self._editor.find_text(term, backward=backward)
 
     def _focus_search(self) -> None:
+        """Reveal the find bar and put the caret in it.
+
+        The reveal has to come first: focusing a widget that is still
+        hidden does nothing at all.
+        """
+        self._find_bar.setVisible(True)
         self._search.setFocus()
         self._search.selectAll()
 
     def _close_search(self) -> None:
-        """Leave the find bar: drop the term and give the editor focus back."""
+        """Leave the find bar: drop the term, hide it, focus the editor."""
         self._search.clear()
+        self._find_bar.setVisible(False)
         self._editor.setFocus()
 
     def _open_settings(self) -> None:
