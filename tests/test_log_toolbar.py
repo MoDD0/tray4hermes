@@ -39,7 +39,7 @@ def dialog(hermes_home: Path, qtbot):
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text("2026-07-27 09:00:00 INFO up\n")
 
-    from tray4hermes.logs_view import LogDialog
+    from tray4hermes.log_dialog import LogDialog
 
     dlg = LogDialog()
     dlg.show()

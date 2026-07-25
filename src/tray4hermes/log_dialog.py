@@ -1,4 +1,4 @@
-"""Log viewer with level-based syntax highlighting, filters, search, and settings.
+"""The log viewer window: editor, gutter, highlighting, toolbars, find bar.
 
 A self-contained QPlainTextEdit + QSyntaxHighlighter implementation. No
 third-party log-viewer library — Qt's own primitives cover every feature
@@ -7,17 +7,14 @@ custom QWidget in the viewport margin, syntax highlight via
 QSyntaxHighlighter, search via QTextDocument.find().
 
 Public surface:
-    LogDialog      Modal viewer with toolbar + statusbar
+    LogDialog      Modal viewer with two toolbars, find bar and statusbar
+    LogTextEdit    The editor widget, gutter included
     LogHighlighter QSyntaxHighlighter for Python logging levels
-    LogSettings    Persisted user preferences (max lines, wrap, etc.)
 """
 
 from __future__ import annotations
 
-import re
-from base64 import b64decode as _b64decode
-from base64 import b64encode as _b64encode
-from dataclasses import dataclass
+import os
 from dataclasses import replace as dc_replace
 from datetime import datetime, timedelta
 
@@ -37,7 +34,6 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
-    QDialogButtonBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -51,6 +47,28 @@ from PyQt5.QtWidgets import (
 
 from tray4hermes import __version__
 from tray4hermes import paths as _paths
+from tray4hermes.log_parse import (
+    LEVEL_ALIASES,
+    LEVEL_PATTERN,
+    is_traceback_line,
+    line_level,
+    line_timestamp,
+)
+from tray4hermes.log_settings import (
+    LogSettingsDialog,
+    load_log_settings,
+    save_log_settings,
+)
+from tray4hermes.log_theme import (
+    CRITICAL_BG,
+    FILTERABLE_LEVELS,
+    LEVEL_COLORS,
+    LOG_FONT_FAMILY,
+    TIME_WINDOW_KEYS,
+    TIME_WINDOW_MINUTES,
+    level_checkbox_style,
+    time_window_index,
+)
 
 # After `i18n.install(...)` runs (in __main__), `tray4hermes.i18n._`
 # is bound to the active translation. We use a *dynamic* lookup so
@@ -68,238 +86,6 @@ except ImportError:
         return s
 
 
-def _as_int(value: object, default: int) -> int:
-    """Coerce a value read from JSON to int, or fall back to `default`."""
-    try:
-        return int(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return default
-
-
-def _as_geometry(value: object) -> bytes | None:
-    """Decode a base64 geometry blob; anything unusable means "no geometry".
-
-    ``binascii.Error`` is a ``ValueError`` subclass, which is why a
-    corrupted blob used to look like a broken settings file.
-    """
-    if not isinstance(value, str):
-        return None
-    try:
-        return _b64decode(value, validate=True)
-    except ValueError:
-        return None
-
-
-# A separate dataclass for log-viewer-only settings. Kept separate from
-# TrayState so changing "max log lines" doesn't touch the user's
-# selected_profile persistence.
-
-
-@dataclass(frozen=True)
-class LogSettings:
-    max_lines: int = 2000
-    auto_scroll: bool = True
-    word_wrap: bool = False
-    font_size: int = 9
-    show_levels: tuple[str, ...] = (
-        "DEBUG",
-        "INFO",
-        "WARNING",
-        "ERROR",
-        "CRITICAL",
-        "TRACE",
-    )
-    show_tracebacks: bool = True
-    time_window_minutes: int = 0  # 0 = show everything
-    reverse_order: bool = False  # False = newest at bottom (tail -f style)
-
-    # Encoded QDialog.saveGeometry() blob (base64). ``None`` = first open,
-    # fall back to the dialog's default size.
-    window_geometry: bytes | None = None
-
-    def to_json(self) -> dict[str, object]:
-        return {
-            "max_lines": self.max_lines,
-            "auto_scroll": self.auto_scroll,
-            "word_wrap": self.word_wrap,
-            "font_size": self.font_size,
-            "show_levels": list(self.show_levels),
-            "show_tracebacks": self.show_tracebacks,
-            "time_window_minutes": self.time_window_minutes,
-            "reverse_order": self.reverse_order,
-            # base64-encode so the JSON stays text-only and stays valid
-            # even if the binary blob contains bytes outside 0x20..0x7e.
-            "window_geometry": (
-                _b64encode(self.window_geometry).decode("ascii")
-                if self.window_geometry is not None
-                else None
-            ),
-        }
-
-    @classmethod
-    def from_json(cls, data: dict[str, object]) -> LogSettings:
-        """Rebuild from a state.json fragment. Never raises.
-
-        Every field falls back to its own default independently. The
-        earlier version wrapped the whole call in one try/except, so a
-        single damaged value — a truncated geometry blob, a hand-edited
-        ``"max_lines": {}`` — discarded the user's entire configuration.
-        """
-        defaults = cls()
-        levels = data.get("show_levels")
-        return cls(
-            max_lines=_as_int(data.get("max_lines"), defaults.max_lines),
-            auto_scroll=bool(data.get("auto_scroll", defaults.auto_scroll)),
-            word_wrap=bool(data.get("word_wrap", defaults.word_wrap)),
-            font_size=_as_int(data.get("font_size"), defaults.font_size),
-            show_levels=tuple(str(x) for x in levels)
-            if isinstance(levels, (list, tuple))
-            else defaults.show_levels,
-            show_tracebacks=bool(data.get("show_tracebacks", defaults.show_tracebacks)),
-            time_window_minutes=_as_int(
-                data.get("time_window_minutes"), defaults.time_window_minutes
-            ),
-            reverse_order=bool(data.get("reverse_order", defaults.reverse_order)),
-            window_geometry=_as_geometry(data.get("window_geometry")),
-        )
-
-    @classmethod
-    def default(cls) -> LogSettings:
-        return cls()
-
-
-def _seed_from_tray_defaults() -> LogSettings:
-    """Viewer settings for a user who has never opened the viewer before.
-
-    The starting point is the global tray configuration, so what the
-    user picked in the Settings dialog is what they get on first open.
-    """
-    from tray4hermes.tray_settings import load_tray_settings
-
-    defaults = load_tray_settings()
-    return LogSettings(
-        max_lines=defaults.default_max_lines,
-        auto_scroll=defaults.default_auto_scroll,
-        word_wrap=defaults.default_word_wrap,
-        show_levels=defaults.default_show_levels,
-    )
-
-
-def _load_log_settings() -> LogSettings:
-    """Read from tray4hermes state.json (under 'log_settings' key).
-
-    Falls back to the tray defaults if missing or malformed. Never raises.
-    """
-    # TrayState is a frozen dataclass; we add log settings to its JSON
-    # shape but keep the dataclass clean by reading from a sibling key
-    # in the same file.
-    import json as _json
-
-    from tray4hermes.paths import tray_state_file
-
-    try:
-        with open(tray_state_file()) as f:
-            data = _json.load(f)
-    except (OSError, ValueError):
-        # OSError covers the missing file; ValueError covers unparseable
-        # JSON. Field-level damage is handled inside `from_json`.
-        data = {}
-
-    raw_log_settings = data.get("log_settings") if isinstance(data, dict) else None
-    if isinstance(raw_log_settings, dict):
-        return LogSettings.from_json(raw_log_settings)
-    return _seed_from_tray_defaults()
-
-
-def _save_log_settings(settings: LogSettings) -> None:
-    """Persist into the same state.json under 'log_settings'. Never raises."""
-    import json as _json
-
-    from tray4hermes.paths import tray_state_file
-
-    p = tray_state_file()
-    try:
-        # Ensure the parent config dir exists (first run after install
-        # or under isolated test XDG_CONFIG_HOME).
-        p.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with open(p) as f:
-                data = _json.load(f)
-        except (FileNotFoundError, OSError, ValueError):
-            data = {}
-        data["log_settings"] = settings.to_json()
-        # Reuse the TrayState save path: write the whole file atomically
-        tmp = p.with_suffix(".tmp")
-        with open(tmp, "w") as f:
-            _json.dump(data, f, indent=2)
-        os.replace(tmp, p)
-    except OSError as exc:
-        print(f"[tray4hermes] save_log_settings failed: {exc}", file=__import__("sys").stderr)
-
-
-# ── Color scheme ────────────────────────────────────────────────────────────
-# Dark theme inspired by the reference screenshot. Light theme would need
-# separate colors; the gateway log is read against a dark IDE-style
-# background and we match that aesthetic.
-
-LEVEL_COLORS: dict[str, QColor] = {
-    "DEBUG": QColor("#6b7280"),  # gray
-    "INFO": QColor("#e5e7eb"),  # near-white
-    "WARNING": QColor("#facc15"),  # amber
-    "WARN": QColor("#facc15"),  # alias for WARNING (loguru, some 3rd-party libs)
-    "ERROR": QColor("#fca5a5"),  # light red
-    "CRITICAL": QColor("#dc2626"),  # strong red
-    "FATAL": QColor("#dc2626"),  # alias for CRITICAL
-    "TRACE": QColor("#4b5563"),  # darker gray
-    "TRACEBACK": QColor("#fb923c"),  # warm orange — distinct from WARNING
-}
-
-# Aliases so a user with WARN / FATAL in their logs gets the same
-# color treatment as WARNING / CRITICAL.
-_LEVEL_ALIASES: dict[str, str] = {
-    "WARN": "WARNING",
-    "FATAL": "CRITICAL",
-}
-
-# A line is considered a "traceback context" (continuation of a stack trace)
-# if it matches any of these patterns. They cover the common Python
-# `logging` output for unhandled exceptions:
-#
-#   Traceback (most recent call last):
-#     File "/usr/lib/...", line 123, in func_name        ← 2 spaces
-#       x = foo()                                        ← 4 spaces
-#           ^                                            ← 4 spaces + ^
-#   RuntimeError: boom
-#   During handling of the above exception, another exception occurred:
-_TRACEBACK_LINE_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"^Traceback \(most recent call last\):"),
-    # Exception line at the bottom of a traceback (flush-left, e.g.
-    # "RuntimeError: boom", "ValueError: nope", "ZeroDivisionError")
-    re.compile(
-        r"^[A-Za-z][A-Za-z0-9_]*(?:Error|Exception|Warning|Interrupt|Exit|StopIteration|KeyboardInterrupt)"
-    ),
-    # Exception line indented (e.g. "  RuntimeError: boom")
-    re.compile(
-        r"^[ ]{2,}[A-Za-z]+(?:Error|Exception|Warning|Interrupt|Exit|StopIteration|KeyboardInterrupt)"  # noqa: E501 (regex)
-    ),
-    # File "x", line N — 2-space indent (Python stdlib format)
-    re.compile(r'^[ ]{2,}File ".*", line \d+'),
-    # pointer line under the failing line (col-aligned)
-    re.compile(r"^[ ]{4,}\^"),
-    re.compile(r"^During handling of the above exception,"),
-    # "The above exception was the direct cause of the following exception:"
-    re.compile(r"^The above exception was the direct cause"),
-)
-
-# Critical lines get a full-row red highlight (like the reference).
-CRITICAL_BG = QColor("#7f1d1d")
-CRITICAL_BG.setAlpha(180)
-
-# Monospace font for log lines; tabular nums make line numbers align.
-LOG_FONT_FAMILY = "Monospace"
-
-
-# ── Syntax highlighter ──────────────────────────────────────────────────────
 class LogHighlighter(QSyntaxHighlighter):
     """Highlights Python `logging` lines by severity.
 
@@ -310,14 +96,11 @@ class LogHighlighter(QSyntaxHighlighter):
         [2026-07-22 17:45:14] [INFO] gateway.run: message
     """
 
-    # Match the level token after the timestamp. We use a non-capturing
-    # group for the prefix so highlightRange fires on the whole line.
-    _LEVEL_RE = QRegularExpression(
-        r"^(?:\d{4}[-/]\d{2}[-/]\d{2}[T ]\d{2}:\d{2}:\d{2}(?:[,\.]\d+)?\s+"
-        r"|\[\d{4}[-/]\d{2}[-/]\d{2}[T ]\d{2}:\d{2}:\d{2}(?:[,\.]\d+)?\]\s*\[?"
-        r"|\[\d{4}[-/]\d{2}[-/]\d{2}[T ]\d{2}:\d{2}:\d{2}(?:[,\.]\d+)?\]\s*\[?"
-        r")([A-Z]+)(?:\]|:)?\s"
-    )
+    # Compiled from the same pattern string the filters use, so the
+    # highlighter can never colour a different set of lines than the
+    # filter keeps. The two used to be hand-maintained copies, and the
+    # Qt one had drifted — it listed one alternative twice.
+    _LEVEL_RE = QRegularExpression(LEVEL_PATTERN)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -335,7 +118,7 @@ class LogHighlighter(QSyntaxHighlighter):
         level = match.captured(1)
         # Normalize aliases (WARN → WARNING, FATAL → CRITICAL) so a
         # line uses the same color regardless of the formatter.
-        canonical = _LEVEL_ALIASES.get(level, level)
+        canonical = LEVEL_ALIASES.get(level, level)
         color = LEVEL_COLORS.get(canonical) or LEVEL_COLORS.get(level)
         if color is None:
             return
@@ -365,7 +148,6 @@ class LogHighlighter(QSyntaxHighlighter):
         self.setFormat(level_start + level_length, len(text) - level_start - level_length, rest_fmt)
 
 
-# ── Line-number gutter ──────────────────────────────────────────────────────
 class LineNumberArea(QWidget):
     """A small gutter on the left of the QPlainTextEdit showing line numbers."""
 
@@ -485,163 +267,6 @@ class LogTextEdit(QPlainTextEdit):
         return False
 
 
-# ── Settings dialog ────────────────────────────────────────────────────────
-class LogSettingsDialog(QDialog):
-    """Modal dialog for editing all LogSettings.
-
-    This is the 'one-stop settings' panel — every preference the log
-    viewer supports is editable here, with sensible defaults shown
-    as the initial state. The toolbar in LogDialog exposes quick-
-    toggle shortcuts for the most-common controls, but this dialog
-    is where the user lands when they click 'Nastavení' to see and
-    change everything at once.
-    """
-
-    def __init__(self, current: LogSettings, parent=None) -> None:
-        super().__init__(parent)
-        # Kept so `result_settings()` can carry through the fields this
-        # dialog has no widget for (see there).
-        self._current = current
-        self.setWindowTitle(_("Log viewer — settings"))
-        # Brand icon so title bar / taskbar entry don't fall back to the
-        # default Qt placeholder glyph when this dialog is opened outside
-        # ``HermesTray`` (e.g. test harness, standalone CLI).
-        from tray4hermes.icons import brand_icon
-
-        self.setWindowIcon(brand_icon())
-        self.resize(420, 560)
-        layout = QVBoxLayout(self)
-
-        # ── Buffer & display ───────────────────────────────────────────
-        layout.addWidget(self._section_label(_("Display")))
-
-        # max lines
-        row = QHBoxLayout()
-        row.addWidget(QLabel(_("Maximum lines in buffer:")))
-        self._max_lines = QSpinBox()
-        self._max_lines.setRange(0, 100_000)
-        self._max_lines.setSingleStep(1)
-        self._max_lines.setAccelerated(True)
-        self._max_lines.setValue(current.max_lines)
-        self._max_lines.setToolTip(
-            _("0 = unlimited (all lines). At higher values, older lines are gradually removed.")
-        )
-        row.addWidget(self._max_lines)
-        layout.addLayout(row)
-
-        # font size
-        row = QHBoxLayout()
-        row.addWidget(QLabel(_("Font size:")))
-        self._font_size = QSpinBox()
-        self._font_size.setRange(6, 24)
-        self._font_size.setValue(current.font_size)
-        row.addWidget(self._font_size)
-        layout.addLayout(row)
-
-        # time window
-        row = QHBoxLayout()
-        row.addWidget(QLabel(_("Time window:")))
-        self._time_window = QComboBox()
-        # Internal keys → minutes; stable across translations.
-        self._tw_keys = ["all", "5m", "15m", "1h", "6h", "24h"]
-        self._tw_map = {"all": 0, "5m": 5, "15m": 15, "1h": 60, "6h": 360, "24h": 1440}
-        self._time_window.addItems([_("All") if k == "all" else k for k in self._tw_keys])
-        # Select current
-        idx = 0
-        for i, k in enumerate(self._tw_keys):
-            if self._tw_map[k] == current.time_window_minutes:
-                idx = i
-                break
-        self._time_window.setCurrentIndex(idx)
-        row.addWidget(self._time_window)
-        layout.addLayout(row)
-
-        # ── Behaviour toggles ──────────────────────────────────────────
-        layout.addWidget(self._section_label(_("Behavior")))
-
-        self._auto_scroll = QCheckBox(_("Auto-scroll on new lines"))
-        self._auto_scroll.setChecked(current.auto_scroll)
-        self._auto_scroll.setToolTip(
-            _(
-                "When ON, the editor stays on the last line on refresh. "
-                "When OFF, cursor position is preserved."
-            )
-        )
-        layout.addWidget(self._auto_scroll)
-
-        self._word_wrap = QCheckBox(_("Wrap long lines"))
-        self._word_wrap.setChecked(current.word_wrap)
-        layout.addWidget(self._word_wrap)
-
-        self._reverse = QCheckBox(_("Reverse order (newest first)"))
-        self._reverse.setChecked(current.reverse_order)
-        self._reverse.setToolTip(
-            _(
-                "Journalctl style — newest lines at top, oldest at bottom. "
-                "Default: newest at bottom (tail -f style)."
-            )
-        )
-        layout.addWidget(self._reverse)
-
-        self._show_tracebacks = QCheckBox(_("Show tracebacks (stack traces)"))
-        self._show_tracebacks.setChecked(current.show_tracebacks)
-        self._show_tracebacks.setToolTip(
-            _(
-                "Special category for stack trace lines. "
-                "You can hide them and see only messages, or leave them visible."
-            )
-        )
-        layout.addWidget(self._show_tracebacks)
-
-        # ── Level filters ──────────────────────────────────────────────
-        layout.addWidget(self._section_label(_("Level filtering")))
-        layout.addWidget(QLabel(_("Visible levels:")))
-        self._level_checks: dict[str, QCheckBox] = {}
-        for level in ("ERROR", "WARNING", "INFO", "DEBUG", "CRITICAL", "TRACE"):
-            cb = QCheckBox(level)
-            cb.setChecked(level in current.show_levels)
-            cb.setStyleSheet(f"QCheckBox {{ color: {LEVEL_COLORS[level].name()}; }}")
-            self._level_checks[level] = cb
-            layout.addWidget(cb)
-
-        # ── OK / Cancel ───────────────────────────────────────────────
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
-
-    @staticmethod
-    def _section_label(text: str) -> QLabel:
-        """A bold sub-header for grouping related controls."""
-        lbl = QLabel(text)
-        lbl.setStyleSheet("font-weight: bold; font-size: 11pt; margin-top: 10px;")
-        return lbl
-
-    def result_settings(self) -> LogSettings:
-        """Build a fresh LogSettings from the dialog's current widget state.
-
-        Fields without a widget here — currently ``window_geometry`` —
-        are carried over from the settings we were opened with. Building
-        them from widget state alone means confirming this dialog resets
-        the viewer's window position on every visit.
-        """
-        levels = tuple(lvl for lvl, cb in self._level_checks.items() if cb.isChecked())
-        tw_idx = self._time_window.currentIndex()
-        tw_key = self._tw_keys[tw_idx] if 0 <= tw_idx < len(self._tw_keys) else "all"
-        return LogSettings(
-            max_lines=self._max_lines.value(),
-            auto_scroll=self._auto_scroll.isChecked(),
-            word_wrap=self._word_wrap.isChecked(),
-            font_size=self._font_size.value(),
-            show_levels=levels,
-            show_tracebacks=self._show_tracebacks.isChecked(),
-            time_window_minutes=self._tw_map.get(tw_key, 0),
-            reverse_order=self._reverse.isChecked(),
-            window_geometry=self._current.window_geometry,
-        )
-
-
-# ── Main viewer dialog ─────────────────────────────────────────────────────
 class LogDialog(QDialog):
     """Hermes Gateway log viewer with toolbar, search, level filters, settings."""
 
@@ -657,7 +282,7 @@ class LogDialog(QDialog):
         self.setWindowIcon(brand_icon())
         # Load settings first so we can restore the last-used geometry
         # before the default resize() triggers an unnecessary layout pass.
-        self._settings = _load_log_settings()
+        self._settings = load_log_settings()
         self.resize(900, 500)
         # Restore the last-used window geometry, if any. ``restoreGeometry``
         # returns False on the first run or after a Qt version mismatch
@@ -739,22 +364,13 @@ class LogDialog(QDialog):
         tb.addSeparator()
         tb.addWidget(QLabel(_("Time: ")))
         self._time_combo = QComboBox()
-        # We label the combo boxes by their translated text but
-        # match user-visible choice back to a stable internal key
-        # (`self._time_choices`). Without the dual mapping, every
-        # translated string would have to match an English key in
-        # the dict; this is fragile across locales.
-        self._time_keys = ["all", "5m", "15m", "1h", "6h", "24h"]
-        self._time_combo.addItems([_("All") if k == "all" else k for k in self._time_keys])
-        # Map stable internal key → minutes. 0 = no filter.
-        self._time_choices = {"all": 0, "5m": 5, "15m": 15, "1h": 60, "6h": 360, "24h": 1440}
-        # Pre-select based on settings
-        current_label = "all"
-        for internal_key in self._time_keys:
-            if self._time_choices[internal_key] == self._settings.time_window_minutes:
-                current_label = internal_key
-                break
-        self._time_combo.setCurrentIndex(self._time_keys.index(current_label))
+        # The combo shows translated labels but maps back to a stable
+        # internal key. Without that indirection every translated string
+        # would have to match an English dict key — fragile across
+        # locales. Keys and minutes come from ``log_theme`` so this combo
+        # and the settings dialog cannot drift apart.
+        self._time_combo.addItems([_("All") if k == "all" else k for k in TIME_WINDOW_KEYS])
+        self._time_combo.setCurrentIndex(time_window_index(self._settings.time_window_minutes))
         self._time_combo.setToolTip(_("Show only lines from the last X minutes (0 = all)."))
         self._time_combo.currentIndexChanged.connect(self._on_time_changed)
         tb.addWidget(self._time_combo)
@@ -817,10 +433,10 @@ class LogDialog(QDialog):
 
         tb.addWidget(QLabel(_("Filter: ")))
         self._level_checkboxes: dict[str, QCheckBox] = {}
-        for level in ("ERROR", "WARNING", "INFO", "DEBUG", "CRITICAL", "TRACE"):
+        for level in FILTERABLE_LEVELS:
             cb = QCheckBox(level)
             cb.setChecked(level in self._settings.show_levels)
-            cb.setStyleSheet(f"QCheckBox {{ color: {LEVEL_COLORS[level].name()}; }}")
+            cb.setStyleSheet(level_checkbox_style(level))
             tb.addWidget(cb)
             self._level_checkboxes[level] = cb
 
@@ -831,9 +447,7 @@ class LogDialog(QDialog):
         # to see alongside the triggering ERROR line.
         self._tb_checkbox = QCheckBox("TRACEBACK")
         self._tb_checkbox.setChecked(self._settings.show_tracebacks)
-        self._tb_checkbox.setStyleSheet(
-            f"QCheckBox {{ color: {LEVEL_COLORS['TRACEBACK'].name()}; font-weight: bold; }}"
-        )
+        self._tb_checkbox.setStyleSheet(level_checkbox_style("TRACEBACK"))
         tb.addWidget(self._tb_checkbox)
 
         self._filter_toolbar = tb
@@ -944,7 +558,7 @@ class LogDialog(QDialog):
             kept: list[str] = []
             last_seen_ts: datetime | None = None
             for line in lines:
-                ts = _line_timestamp(line)
+                ts = line_timestamp(line)
                 if ts is not None:
                     last_seen_ts = ts
                 # Apply cutoff only to lines WITH a timestamp (so
@@ -965,17 +579,17 @@ class LogDialog(QDialog):
         #    dumps from leaking through when filtered.
         known_levels = set(LEVEL_COLORS.keys()) - {"TRACEBACK"}
         active = set(self._settings.show_levels)
-        active_canonical = {_LEVEL_ALIASES.get(lvl, lvl) for lvl in active}
-        known_canonical = {_LEVEL_ALIASES.get(lvl, lvl) for lvl in known_levels}
+        active_canonical = {LEVEL_ALIASES.get(lvl, lvl) for lvl in active}
+        known_canonical = {LEVEL_ALIASES.get(lvl, lvl) for lvl in known_levels}
         hidden = known_canonical - active_canonical
         show_tr = self._settings.show_tracebacks
 
         def _keep(line: str) -> bool:
-            level = _line_level(line)
+            level = line_level(line)
             if level is not None:
-                canonical = _LEVEL_ALIASES.get(level, level)
+                canonical = LEVEL_ALIASES.get(level, level)
                 return canonical not in hidden
-            if _is_traceback_line(line):
+            if is_traceback_line(line):
                 return show_tr
             return False
 
@@ -1035,8 +649,8 @@ class LogDialog(QDialog):
         # Compute quick stats from the visible text
         text = self._editor.toPlainText()
         total = text.count("\n") + (1 if text and not text.endswith("\n") else 0)
-        errors = sum(1 for ln in text.splitlines() if _line_level(ln) in ("ERROR", "CRITICAL"))
-        warnings = sum(1 for ln in text.splitlines() if _line_level(ln) == "WARNING")
+        errors = sum(1 for ln in text.splitlines() if line_level(ln) in ("ERROR", "CRITICAL"))
+        warnings = sum(1 for ln in text.splitlines() if line_level(ln) == "WARNING")
         # Cursor line
         cur = self._editor.textCursor()
         line = cur.blockNumber() + 1
@@ -1051,7 +665,7 @@ class LogDialog(QDialog):
     def _update_with(self, **kwargs) -> None:
         """Mutate settings, save, and re-render. Used by every toolbar toggle."""
         self._settings = dc_replace(self._settings, **kwargs)
-        _save_log_settings(self._settings)
+        save_log_settings(self._settings)
         self._apply_settings()
         self._refresh()
         self._update_status()
@@ -1065,7 +679,7 @@ class LogDialog(QDialog):
         # autoscroll doesn't need re-render — but we still want the
         # status bar updated so the user sees the new state.
         self._settings = dc_replace(self._settings, auto_scroll=checked)
-        _save_log_settings(self._settings)
+        save_log_settings(self._settings)
         self._update_status()
 
     def _on_wrap_toggle(self, checked: bool) -> None:
@@ -1079,15 +693,15 @@ class LogDialog(QDialog):
         self._update_with(show_tracebacks=checked)
 
     def _on_time_changed(self, index: int) -> None:
-        # ``index`` is the combo box position, which maps to a
-        # stable internal key in ``self._time_keys``. We deliberately
-        # don't bind to the translated label — that's user-visible
-        # text and shouldn't drive persistence.
-        if 0 <= index < len(self._time_keys):
-            internal_key = self._time_keys[index]
+        # ``index`` is the combo box position, which maps to a stable
+        # internal key. We deliberately don't bind to the translated
+        # label — that's user-visible text and shouldn't drive
+        # persistence.
+        if 0 <= index < len(TIME_WINDOW_KEYS):
+            internal_key = TIME_WINDOW_KEYS[index]
         else:
             internal_key = "all"
-        minutes = self._time_choices.get(internal_key, 0)
+        minutes = TIME_WINDOW_MINUTES.get(internal_key, 0)
         self._update_with(time_window_minutes=minutes)
 
     def _on_reverse_toggle(self, checked: bool) -> None:
@@ -1125,7 +739,7 @@ class LogDialog(QDialog):
           immediately to the running viewer.
         - The toolbar toggle buttons are re-synced to match the new
           state (so the UI doesn't lie about what's active).
-        - Everything is saved to state.json via _save_log_settings.
+        - Everything is saved to state.json via save_log_settings.
         """
         dlg = LogSettingsDialog(self._settings, self)
         if dlg.exec_() != QDialog.Accepted:
@@ -1144,19 +758,16 @@ class LogDialog(QDialog):
         # Max-lines spinbox
         self._max_lines_spin.setValue(self._settings.max_lines)
         # Time-window combo
-        for i, k in enumerate(self._time_keys):
-            if self._time_choices.get(k, 0) == self._settings.time_window_minutes:
-                self._time_combo.setCurrentIndex(i)
-                break
+        self._time_combo.setCurrentIndex(time_window_index(self._settings.time_window_minutes))
 
-        _save_log_settings(self._settings)
+        save_log_settings(self._settings)
         self._refresh()
 
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt naming)
         """Persist the user's window size + position so the next open
         restores the same layout."""
         self._settings = dc_replace(self._settings, window_geometry=bytes(self.saveGeometry()))
-        _save_log_settings(self._settings)
+        save_log_settings(self._settings)
         super().closeEvent(event)
 
     def keyPressEvent(self, event) -> None:  # noqa: N802
@@ -1170,58 +781,3 @@ class LogDialog(QDialog):
             self._close_search()
             return
         super().keyPressEvent(event)
-
-
-# ── Helpers ────────────────────────────────────────────────────────────────
-_LEVEL_RE = re.compile(
-    r"^(?:\d{4}[-/]\d{2}[-/]\d{2}[T ]\d{2}:\d{2}:\d{2}(?:[,\.]\d+)?\s+"
-    r"|\[\d{4}[-/]\d{2}[-/]\d{2}[T ]\d{2}:\d{2}:\d{2}(?:[,\.]\d+)?\]\s*\[?"
-    r")([A-Z]+)(?:\]|:)?\s"
-)
-
-# Captures the leading timestamp (and nothing else) so callers can
-# re-format / time-filter without re-running regex.
-_TIMESTAMP_RE = re.compile(
-    r"^(?P<date>\d{4}[-/]\d{2}[-/]\d{2})(?:[T ](?P<time>\d{2}:\d{2}:\d{2}(?:[,\.]\d+)?))?"
-    r"|^\[(?P<date2>\d{4}[-/]\d{2}[-/]\d{2})(?:[T ](?P<time2>\d{2}:\d{2}:\d{2}(?:[,\.]\d+)?))?\]"
-)
-
-
-def _line_level(line: str) -> str | None:
-    """Return the log level of a line, or None if it doesn't match."""
-    m = _LEVEL_RE.match(line)
-    return m.group(1) if m else None
-
-
-def _line_timestamp(line: str) -> datetime | None:
-    """Extract a datetime from the leading timestamp on a log line.
-
-    Returns None when the line has no parseable timestamp (e.g. a
-    traceback continuation). The time-based filter uses this to
-    decide whether a line is inside the configured window.
-    """
-    m = _TIMESTAMP_RE.match(line)
-    if not m:
-        return None
-    date = m.group("date") or m.group("date2")
-    time = (m.group("time") or m.group("time2") or "00:00:00").replace(",", ".")
-    try:
-        return datetime.fromisoformat(f"{date}T{time}")
-    except ValueError:
-        return None
-
-
-def _is_traceback_line(line: str) -> bool:
-    """True if `line` looks like a Python stack-trace continuation.
-
-    Used by the level filter to give stack-trace lines their own toggle
-    (TRACEBACK) so the user can show only the message (no traceback),
-    only the traceback (no surrounding log noise), or everything.
-    """
-    if not line:
-        return False
-    return any(p.match(line) for p in _TRACEBACK_LINE_PATTERNS)
-
-
-# Late import to keep `os` in one place at the bottom of the file.
-import os  # noqa: E402

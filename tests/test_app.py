@@ -227,7 +227,7 @@ class TestHermesTrayConstruction:
 class TestLogDialog:
     def test_dialog_construction_with_missing_log(self, hermes_home, qtbot) -> None:
         # No log file → dialog must still construct and not crash
-        from tray4hermes.logs_view import LogDialog
+        from tray4hermes.log_dialog import LogDialog
 
         dlg = LogDialog()
         # Manually invoke the first refresh — it should swallow the OSError
@@ -245,7 +245,7 @@ class TestLogDialog:
             "2026-07-22 10:00:01 INFO line 2\n"
             "2026-07-22 10:00:02 INFO line 3\n"
         )
-        from tray4hermes.logs_view import LogDialog
+        from tray4hermes.log_dialog import LogDialog
 
         dlg = LogDialog()
         dlg._refresh()
@@ -255,7 +255,8 @@ class TestLogDialog:
 
     def test_reverse_order_toggle(self, hermes_home, qtbot) -> None:
         # Default order: newest at bottom (tail -f). Reversed: newest at top.
-        from tray4hermes.logs_view import LogDialog, LogSettings
+        from tray4hermes.log_dialog import LogDialog
+        from tray4hermes.log_settings import LogSettings
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -280,7 +281,8 @@ class TestLogDialog:
     def test_reverse_order_keeps_newest_line_at_top_and_scrolls_to_top(
         self, hermes_home, qtbot
     ) -> None:
-        from tray4hermes.logs_view import LogDialog, LogSettings
+        from tray4hermes.log_dialog import LogDialog
+        from tray4hermes.log_settings import LogSettings
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -298,7 +300,8 @@ class TestLogDialog:
         assert scrollbar.value() == scrollbar.minimum()
 
     def test_refresh_preserves_manual_scroll_position(self, hermes_home, qtbot) -> None:
-        from tray4hermes.logs_view import LogDialog, LogSettings
+        from tray4hermes.log_dialog import LogDialog
+        from tray4hermes.log_settings import LogSettings
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -316,7 +319,8 @@ class TestLogDialog:
         assert scrollbar.value() == position
 
     def test_refresh_preserves_manual_reverse_scroll_position(self, hermes_home, qtbot) -> None:
-        from tray4hermes.logs_view import LogDialog, LogSettings
+        from tray4hermes.log_dialog import LogDialog
+        from tray4hermes.log_settings import LogSettings
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -336,7 +340,8 @@ class TestLogDialog:
         assert scrollbar.value() == position
 
     def test_refresh_follows_edge_when_auto_scroll_enabled(self, hermes_home, qtbot) -> None:
-        from tray4hermes.logs_view import LogDialog, LogSettings
+        from tray4hermes.log_dialog import LogDialog
+        from tray4hermes.log_settings import LogSettings
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -357,7 +362,7 @@ class TestLogDialog:
         # in the file passes through.
         from datetime import datetime, timedelta
 
-        from tray4hermes.logs_view import LogDialog
+        from tray4hermes.log_dialog import LogDialog
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -375,7 +380,8 @@ class TestLogDialog:
 
     def test_max_lines_spinbox_zero_means_unlimited(self, hermes_home, qtbot) -> None:
         # Setting max_lines=0 removes the rolling-window cap.
-        from tray4hermes.logs_view import LogDialog, LogSettings
+        from tray4hermes.log_dialog import LogDialog
+        from tray4hermes.log_settings import LogSettings
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -393,7 +399,7 @@ class TestLogDialog:
         # neither level-tagged nor traceback continuations. They should
         # be dropped when the filter is active (i.e. always with the
         # current default).
-        from tray4hermes.logs_view import LogDialog
+        from tray4hermes.log_dialog import LogDialog
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -415,7 +421,8 @@ class TestLogDialog:
     def test_traceback_lines_dropped_when_toggle_off(self, hermes_home, qtbot) -> None:
         # A real Python traceback, with TRACEBACK toggle off, should be
         # hidden — even though the triggering ERROR line stays visible.
-        from tray4hermes.logs_view import LogDialog, LogSettings
+        from tray4hermes.log_dialog import LogDialog
+        from tray4hermes.log_settings import LogSettings
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -444,7 +451,7 @@ class TestLogDialog:
 
     def test_level_filter_hides_other_levels(self, hermes_home, qtbot) -> None:
         # If only ERROR is enabled, WARN/INFO lines should be hidden after refresh
-        from tray4hermes.logs_view import LogDialog
+        from tray4hermes.log_dialog import LogDialog
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -454,7 +461,7 @@ class TestLogDialog:
             "2026-07-22 10:00:02 ERROR this is error\n"
         )
         dlg = LogDialog()
-        from tray4hermes.logs_view import LogSettings
+        from tray4hermes.log_settings import LogSettings
 
         # LogSettings is a frozen dataclass — bypass the frozen check to
         # swap in a settings object with a different level filter.
@@ -467,7 +474,8 @@ class TestLogDialog:
 
     def test_max_lines_buffer_limit(self, hermes_home, qtbot) -> None:
         # setMaximumBlockCount trims old lines from the top
-        from tray4hermes.logs_view import LogDialog, LogSettings
+        from tray4hermes.log_dialog import LogDialog
+        from tray4hermes.log_settings import LogSettings
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -489,7 +497,8 @@ class TestLogDialog:
         # (the live edge is at the top), not the oldest. With 50 lines
         # and max_lines=10, the displayed buffer should be the last 10
         # lines of the file, i.e. line 40..49 with lines 40-49 at top.
-        from tray4hermes.logs_view import LogDialog, LogSettings
+        from tray4hermes.log_dialog import LogDialog
+        from tray4hermes.log_settings import LogSettings
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -511,7 +520,7 @@ class TestLogDialog:
     def test_log_settings_dialog_max_lines_spin_uses_single_step(self, hermes_home, qtbot) -> None:
         # The max-lines spinbox should step by 1 (not 500) so users can
         # fine-tune. They can still type any value manually.
-        from tray4hermes.logs_view import LogSettings, LogSettingsDialog
+        from tray4hermes.log_settings import LogSettings, LogSettingsDialog
 
         dlg = LogSettingsDialog(LogSettings(max_lines=2000))
         qtbot.addWidget(dlg)
@@ -566,7 +575,8 @@ class TestLogDialog:
         from PyQt5.QtWidgets import QDialog
 
         from tray4hermes.icons import brand_icon
-        from tray4hermes.logs_view import LogDialog, LogSettings, LogSettingsDialog
+        from tray4hermes.log_dialog import LogDialog
+        from tray4hermes.log_settings import LogSettings, LogSettingsDialog
         from tray4hermes.tray_settings import TraySettings, TraySettingsDialog
 
         expected = brand_icon()
@@ -586,7 +596,7 @@ class TestLogDialog:
         """When the user resizes the log viewer and closes it, the next
         open must restore the same size. Prevents the annoying default
         900×500 reset every time the user picks a custom size."""
-        from tray4hermes.logs_view import LogDialog
+        from tray4hermes.log_dialog import LogDialog
 
         log = hermes_home / "logs" / "gateway.log"
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -602,9 +612,9 @@ class TestLogDialog:
         # ``closeEvent``; we do that by ``close()``.
         dlg.close()
         # closeEvent must have persisted the new geometry to state.json.
-        from tray4hermes.logs_view import _load_log_settings
+        from tray4hermes.log_settings import load_log_settings
 
-        persisted = _load_log_settings()
+        persisted = load_log_settings()
         assert persisted.window_geometry, "closeEvent did not save geometry"
 
         # Second open: must restore the new size.

@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -114,7 +115,7 @@ def save_tray_state(state: TrayState) -> None:
             json.dump(state.to_json(), f, indent=2)
         os.replace(tmp, target_file)
     except OSError as exc:
-        print(f"[tray4hermes] save_tray_state failed: {exc}", file=__import__("sys").stderr)
+        print(f"[tray4hermes] save_tray_state failed: {exc}", file=sys.stderr)
 
 
 # ── Hermes reads (best-effort, never raise into UI) ────────────────────────

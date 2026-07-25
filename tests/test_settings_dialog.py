@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tray4hermes.logs_view import LogSettings, LogSettingsDialog
+from tray4hermes.log_settings import LogSettings, LogSettingsDialog
 
 
 def test_settings_dialog_has_all_fields(hermes_home: Path, qtbot) -> None:
@@ -32,9 +32,10 @@ def test_settings_dialog_has_all_fields(hermes_home: Path, qtbot) -> None:
     assert dlg._reverse.isChecked() is True
     assert dlg._show_tracebacks.isChecked() is False
 
-    tw_idx = dlg._time_window.currentIndex()
-    tw_key = dlg._tw_keys[tw_idx]
-    assert dlg._tw_map[tw_key] == 60
+    from tray4hermes.log_theme import TIME_WINDOW_KEYS, TIME_WINDOW_MINUTES
+
+    tw_key = TIME_WINDOW_KEYS[dlg._time_window.currentIndex()]
+    assert TIME_WINDOW_MINUTES[tw_key] == 60
 
     for level, cb in dlg._level_checks.items():
         expected = level in ("ERROR", "WARNING")

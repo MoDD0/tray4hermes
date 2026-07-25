@@ -2,7 +2,7 @@
 
 This is the 'control panel' for Tray4Hermes itself — separate from
 the log viewer's own settings (which live in ``LogSettings`` /
-``LogSettingsDialog`` in ``logs_view.py``).
+``LogSettingsDialog`` in ``log_settings.py``).
 
 The user opens it from the tray menu: **Nastavení tray4hermes**.
 It shows a Qt form with:
@@ -48,7 +48,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 
-from tray4hermes.logs_view import LEVEL_COLORS
+from tray4hermes.log_theme import FILTERABLE_LEVELS, level_checkbox_style, section_label
 from tray4hermes.paths import tray_state_file
 
 # Re-export the gettext stub so this module doesn't need the
@@ -184,7 +184,7 @@ class TraySettingsDialog(QDialog):
 
     This is what opens when the user clicks 'Nastavení tray4hermes'
     in the tray menu. It is NOT the log viewer's settings dialog
-    (that's ``LogSettingsDialog`` in ``logs_view.py``).
+    (that's ``LogSettingsDialog`` in ``log_settings.py``).
     """
 
     def __init__(self, current: TraySettings, parent=None) -> None:
@@ -200,7 +200,7 @@ class TraySettingsDialog(QDialog):
         layout = QVBoxLayout(self)
 
         # ── Language ──────────────────────────────────────────────
-        layout.addWidget(self._section_label(_("Language")))
+        layout.addWidget(section_label(_("Language")))
 
         row = QHBoxLayout()
         row.addWidget(QLabel(_("Interface language:")))
@@ -237,7 +237,7 @@ class TraySettingsDialog(QDialog):
         layout.addWidget(hint)
 
         # ── Log viewer defaults ───────────────────────────────────
-        layout.addWidget(self._section_label(_("Log viewer defaults")))
+        layout.addWidget(section_label(_("Log viewer defaults")))
 
         # Default max lines
         row = QHBoxLayout()
@@ -264,10 +264,10 @@ class TraySettingsDialog(QDialog):
         # Default levels
         layout.addWidget(QLabel(_("Default visible levels:")))
         self._level_checks: dict[str, QCheckBox] = {}
-        for level in ("ERROR", "WARNING", "INFO", "DEBUG", "CRITICAL", "TRACE"):
+        for level in FILTERABLE_LEVELS:
             cb = QCheckBox(level)
             cb.setChecked(level in current.default_show_levels)
-            cb.setStyleSheet(f"QCheckBox {{ color: {LEVEL_COLORS[level].name()}; }}")
+            cb.setStyleSheet(level_checkbox_style(level))
             self._level_checks[level] = cb
             layout.addWidget(cb)
 
@@ -276,12 +276,6 @@ class TraySettingsDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
-
-    @staticmethod
-    def _section_label(text: str) -> QLabel:
-        lbl = QLabel(text)
-        lbl.setStyleSheet("font-weight: bold; font-size: 11pt; margin-top: 10px;")
-        return lbl
 
     def result_settings(self) -> TraySettings:
         """Build a fresh TraySettings from the dialog's widget state."""

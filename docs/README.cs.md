@@ -458,7 +458,10 @@ tray4hermes/
 │       ├── paths.py          # všechny cesty a tunables
 │       ├── icons.py          # továrna na ikony přes QPainter
 │       ├── lock.py           # zámek jediné instance
-│       ├── logs_view.py      # LogDialog (plnohodnotný prohlížeč)
+│       ├── log_dialog.py     # LogDialog — editor, gutter, toolbary, find bar
+│       ├── log_settings.py   # nastavení prohlížeče: dataclass, persistence, dialog
+│       ├── log_parse.py      # parsování úrovní / časů / tracebacků (bez Qt widgetů)
+│       ├── log_theme.py      # barvy, fonty a konstanty filtrů sdílené oběma dialogy
 │       ├── tray_settings.py  # globální nastavení (jazyk, výchozí hodnoty)
 │       ├── i18n.py           # gettext wrapper + přepínání jazyka za běhu
 │       ├── py.typed          # PEP 561 marker
@@ -477,9 +480,11 @@ tray4hermes/
     ├── test_i18n_runtime.py  # gettext katalogy, jazyk msgid
     ├── test_launchers.py     # výběr a spuštění editoru / terminálu
     ├── test_lock.py          # zámek jediné instance
+    ├── test_log_parse.py     # parsování úrovní / časů, oba regex enginy
     ├── test_log_refresh.py   # co prohlížeč ukáže, když log nejde přečíst
     ├── test_log_settings.py  # persistence nastavení prohlížeče
     ├── test_log_shortcuts.py # Ctrl+F / F3 / Shift+F3 / Esc přes reálné klávesy
+    ├── test_log_toolbar.py   # řádky toolbaru zůstávají vidět při reálných šířkách
     ├── test_readme_freshness.py  # zkompilovaná README odpovídají zdrojům
     ├── test_readme_parity.py # parita obrázků mezi en.md a cs.md
     ├── test_settings_dialog.py   # dialog nastavení prohlížeče logu
