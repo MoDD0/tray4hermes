@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from PyQt5.QtCore import Qt
 
 from tray4hermes.state import GatewayState
 
@@ -122,11 +123,19 @@ class TestHermesTrayConstruction:
             i18n.install("en")
             tray._quit()
 
-    def test_open_settings_uses_valid_qt_parent(self, hermes_home, monkeypatch) -> None:
+    def test_cancelling_settings_leaves_the_saved_settings_untouched(
+        self, hermes_home, monkeypatch
+    ) -> None:
+        """Cancel must be a no-op. (This replaces a test that only
+        checked `_open_tray_settings()` did not raise — it had no
+        assert at all and passed no matter what the method did.)"""
         from PyQt5.QtWidgets import QDialog
 
         from tray4hermes.app import HermesTray
+        from tray4hermes.tray_settings import TraySettings, load_tray_settings, save_tray_settings
 
+        stored = TraySettings(language="cs", default_max_lines=1234, default_word_wrap=True)
+        save_tray_settings(stored)
         monkeypatch.setattr(
             "tray4hermes.tray_settings.TraySettingsDialog.exec_",
             lambda self: QDialog.Rejected,
@@ -134,6 +143,23 @@ class TestHermesTrayConstruction:
         tray = HermesTray()
         try:
             tray._open_tray_settings()
+        finally:
+            tray._quit()
+
+        assert load_tray_settings() == stored
+
+    def test_construction_prints_nothing_to_stderr(self, hermes_home, monkeypatch, capsys) -> None:
+        """A leftover debug block wrote tray geometry to stderr whenever
+        TRAY4HERMES_DEBUG was *present* in the environment — so setting
+        it to 0 turned it on."""
+        monkeypatch.setenv("TRAY4HERMES_DEBUG", "0")
+        capsys.readouterr()  # drop anything earlier in the fixture chain
+
+        from tray4hermes.app import HermesTray
+
+        tray = HermesTray()
+        try:
+            assert capsys.readouterr().err == ""
         finally:
             tray._quit()
 
@@ -326,6 +352,7 @@ class TestLogDialog:
 
         assert scrollbar.value() == scrollbar.maximum()
 
+    def test_time_window_zero_shows_everything(self, hermes_home, qtbot) -> None:
         # With time_window_minutes=0 the filter is disabled; everything
         # in the file passes through.
         from datetime import datetime, timedelta
@@ -360,6 +387,8 @@ class TestLogDialog:
         # No rolling cap → all 50 lines pass through
         assert "line 0" in dlg._editor.toPlainText()
         assert "line 49" in dlg._editor.toPlainText()
+
+    def test_unparseable_lines_are_dropped(self, hermes_home, qtbot) -> None:
         # "## Human Summary" / "rss=218MB" / "archived 31 skill(s):" are
         # neither level-tagged nor traceback continuations. They should
         # be dropped when the filter is active (i.e. always with the
@@ -487,30 +516,48 @@ class TestLogDialog:
         dlg = LogSettingsDialog(LogSettings(max_lines=2000))
         qtbot.addWidget(dlg)
         assert dlg._max_lines.singleStep() == 1
-        # Manual typing is unrestricted
-        dlg._max_lines.setValue(0)
-        dlg._max_lines.lineEdit().setText("350")
-        dlg._max_lines.lineEdit().editingFinished.emit()
-        assert dlg._max_lines.value() == 350
 
-    def test_brand_icon_is_green_circle(self, hermes_home, qtbot) -> None:
-        """The brand icon must be a green H-circle. Catches accidental
-        regressions where someone replaces the icon with a default
-        Qt placeholder or a different color."""
-        from tray4hermes.icons import STATE_COLORS, brand_icon
+        # Typed on the real keyboard rather than via setText + a manual
+        # editingFinished emit, which bypassed the input validator.
+        dlg._max_lines.lineEdit().selectAll()
+        qtbot.keyClicks(dlg._max_lines, "75000")
+        qtbot.keyClick(dlg._max_lines, Qt.Key_Return)
+
+        assert dlg._max_lines.value() == 75000, (
+            "a typed value inside the range must be accepted verbatim"
+        )
+
+    def test_brand_icon_is_a_green_circle_with_a_white_glyph(self, hermes_home, qtbot) -> None:
+        """Sampled from the rendered pixmap. The previous version of this
+        test asserted `STATE_COLORS["active"] == "#4caf50"` — a copy of a
+        literal out of icons.py, which stays true however the icon is
+        drawn (or if it stops being drawn at all)."""
+        from PyQt5.QtCore import QSize
+        from PyQt5.QtGui import QColor
+
+        from tray4hermes.icons import brand_icon
 
         icon = brand_icon()
         assert not icon.isNull()
-        # 64×64 pixmap — sampled to confirm a green pixel dominates.
-        # We don't compare pixels exactly (font hinting varies by Qt
-        # version); we just verify the icon was generated and is not
-        # the empty placeholder.
-        from PyQt5.QtCore import QSize
+        assert QSize(64, 64) in icon.availableSizes()
 
-        sizes = icon.availableSizes()
-        assert QSize(64, 64) in sizes
-        # Active color must be green
-        assert STATE_COLORS["active"].lower() == "#4caf50"
+        image = icon.pixmap(64, 64).toImage()
+        # Well inside the circle (it spans 4..60) but left of the glyph.
+        # The expected value is spelled out rather than read back from
+        # STATE_COLORS — comparing the pixel to the very constant that
+        # painted it would pass for any color.
+        body = QColor(image.pixel(12, 32))
+        assert body.name().lower() == "#4caf50", (
+            f"the icon body should be the brand green; got {body.name()}"
+        )
+        # The corner is outside the circle — the icon must stay transparent
+        # there rather than shipping as an opaque square.
+        assert QColor.fromRgba(image.pixel(1, 1)).alpha() == 0
+        # The white 'H' has to be drawn on top of the circle.
+        white_pixels = sum(
+            1 for x in range(64) for y in range(64) if QColor(image.pixel(x, y)).lightness() > 200
+        )
+        assert white_pixels > 50, f"no white glyph found on the icon ({white_pixels} light pixels)"
 
     def test_dialogs_use_brand_icon(self, hermes_home, qtbot) -> None:
         """Every dialog must call setWindowIcon(brand_icon()) so the

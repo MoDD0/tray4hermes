@@ -86,25 +86,83 @@ def test_required_version_rejects_wrong_manual_bump(versioning_module) -> None:
         versioning_module.required_version_for_commit("2.0.0", "2.1.0", "fix: repair state")
 
 
-def test_prepare_commit_accepts_pre_bumped_version(
-    versioning_module, tmp_path: Path, monkeypatch
-) -> None:
+@pytest.fixture
+def commit_gate(versioning_module, tmp_path: Path, monkeypatch):
+    """Run `prepare_commit` against a fake repo.
+
+    Caller picks the version in HEAD, the version in the working tree,
+    and the commit message; the fixture returns the hook's exit code.
+    """
     version_file = tmp_path / "src" / "tray4hermes" / "__init__.py"
     version_file.parent.mkdir(parents=True)
-    version_file.write_text('__version__ = "2.0.1"\n', encoding="utf-8")
     message_file = tmp_path / "COMMIT_EDITMSG"
-    message_file.write_text("fix: repair state\n", encoding="utf-8")
-    calls: list[tuple[str, ...]] = []
 
-    def fake_git(*args: str) -> str:
-        calls.append(args)
-        if args[:2] == ("show", "HEAD:src/tray4hermes/__init__.py"):
-            return '__version__ = "2.0.0"\n'
-        return ""
+    def run(*, committed: str, working: str, message: str, git_fails: bool = False) -> int:
+        version_file.write_text(f'__version__ = "{working}"\n', encoding="utf-8")
+        message_file.write_text(message, encoding="utf-8")
 
-    monkeypatch.setattr(versioning_module, "VERSION_FILE", version_file)
-    monkeypatch.setattr(versioning_module, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(versioning_module, "_git", fake_git)
-    assert versioning_module.prepare_commit(message_file) == 0
-    assert version_file.read_text(encoding="utf-8") == '__version__ = "2.0.1"\n'
-    assert not any(call[0] == "add" for call in calls)
+        def fake_git(*args: str) -> str:
+            if git_fails:
+                raise RuntimeError("fatal: not a git repository")
+            if args[:2] == ("show", "HEAD:src/tray4hermes/__init__.py"):
+                return f'__version__ = "{committed}"\n'
+            raise AssertionError(f"unexpected git call: {args}")
+
+        monkeypatch.setattr(versioning_module, "VERSION_FILE", version_file)
+        monkeypatch.setattr(versioning_module, "REPO_ROOT", tmp_path)
+        monkeypatch.setattr(versioning_module, "_git", fake_git)
+        return versioning_module.prepare_commit(message_file)
+
+    return run
+
+
+class TestCommitGate:
+    """What the hook accepts and rejects.
+
+    The previous single test asserted that `prepare_commit` had not
+    written the version file and had not run `git add` — neither of
+    which it can do; it only reads. Nothing covered the rejections,
+    which are the entire point of the gate.
+    """
+
+    def test_correctly_pre_bumped_version_is_accepted(self, commit_gate) -> None:
+        assert commit_gate(committed="2.0.0", working="2.0.1", message="fix: repair state\n") == 0
+
+    def test_docs_commit_needs_no_bump(self, commit_gate) -> None:
+        code = commit_gate(committed="2.0.1", working="2.0.1", message="docs: clarify install\n")
+
+        assert code == 0
+
+    def test_missing_bump_is_rejected(self, commit_gate, capsys) -> None:
+        code = commit_gate(committed="2.0.0", working="2.0.0", message="fix: repair state\n")
+
+        assert code == 1
+        assert "expected 2.0.1" in capsys.readouterr().err
+
+    def test_patch_bump_for_a_feature_is_rejected(self, commit_gate, capsys) -> None:
+        code = commit_gate(committed="2.0.0", working="2.0.1", message="feat: add widget\n")
+
+        assert code == 1
+        assert "expected 2.1.0" in capsys.readouterr().err
+
+    def test_bumping_a_docs_commit_is_rejected(self, commit_gate) -> None:
+        """`docs:` must not move the version. 2.0.4 → 2.0.5 slipped
+        through exactly this way while no gate was running."""
+        assert commit_gate(committed="2.0.4", working="2.0.5", message="docs: update README\n") == 1
+
+    def test_a_downgrade_is_rejected(self, commit_gate, capsys) -> None:
+        """The incident this gate exists for: 2.0.11 → 2.0.6."""
+        code = commit_gate(committed="2.0.11", working="2.0.6", message="fix: repair state\n")
+
+        assert code == 1
+        assert "expected 2.0.12" in capsys.readouterr().err
+
+    def test_git_failure_is_reported_rather_than_raised(self, commit_gate, capsys) -> None:
+        """A hook that raises leaves git printing a traceback at the
+        user instead of a message."""
+        code = commit_gate(
+            committed="2.0.0", working="2.0.1", message="fix: repair state\n", git_fails=True
+        )
+
+        assert code == 1
+        assert "versioning error" in capsys.readouterr().err

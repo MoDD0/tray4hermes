@@ -1,7 +1,7 @@
 # tray4hermes
 
 <!-- tray4hermes:version -->
-[![version: 2.0.11](https://img.shields.io/badge/version-2.0.11-blue.svg)](https://github.com/MoDD0/tray4hermes/releases)
+[![version: 2.0.12](https://img.shields.io/badge/version-2.0.12-blue.svg)](https://github.com/MoDD0/tray4hermes/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -456,11 +456,16 @@ tray4hermes/
 └── tests/
     ├── conftest.py
     ├── test_app.py           # Qt offscreen — tray menu and actions
-    ├── test_editor_picker.py # "Open config" editor resolution
+    ├── test_cli.py           # `python -m tray4hermes` argument handling
+    ├── test_gateway_control.py   # systemctl actions, profile switching
     ├── test_i18n_build.py    # README build script
     ├── test_i18n_parity.py   # build + lint scripts wired into pytest
     ├── test_i18n_runtime.py  # gettext catalogs, msgid language
+    ├── test_launchers.py     # editor / terminal resolution and spawning
     ├── test_lock.py          # single-instance lock
+    ├── test_log_refresh.py   # what the viewer shows when the log is unreadable
+    ├── test_log_settings.py  # viewer settings persistence
+    ├── test_log_shortcuts.py # Ctrl+F / F3 / Shift+F3 / Esc, real key path
     ├── test_readme_freshness.py  # compiled READMEs match their sources
     ├── test_readme_parity.py # image parity between en.md and cs.md
     ├── test_settings_dialog.py   # log-viewer settings dialog

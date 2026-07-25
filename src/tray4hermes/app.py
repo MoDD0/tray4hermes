@@ -61,6 +61,22 @@ from tray4hermes.state import (
     switch_profile,
 )
 
+# Terminal emulators the "Hermes CLI" menu item can open, with the flag
+# that makes each one run a command instead of a login shell. Ordered by
+# preference: the KDE default first (this is a Plasma tray), then the
+# Debian alternatives symlink, then the usual suspects. The flags are
+# genuinely per-terminal — ``gnome-terminal`` wants ``--`` and
+# ``xfce4-terminal`` wants ``-x``, both of them reject ``-e``.
+TERMINALS: tuple[tuple[str, str], ...] = (
+    ("konsole", "-e"),
+    ("x-terminal-emulator", "-e"),
+    ("alacritty", "-e"),
+    ("kitty", "-e"),
+    ("gnome-terminal", "--"),
+    ("xfce4-terminal", "-x"),
+    ("xterm", "-e"),
+)
+
 
 class HermesTray:
     """Builds and runs the tray. Single public method: run()."""
@@ -112,14 +128,6 @@ class HermesTray:
         # some KDE 6 shells see an empty/uninitialized tray and drop
         # the registration.
         self.app.processEvents()
-        # DEBUG: confirm registration — removed once the icon is reliable
-        if "TRAY4HERMES_DEBUG" in os.environ:
-            print(
-                f"[tray4hermes] shown={self._tray.isVisible()} "
-                f"geometry={self._tray.geometry()} "
-                f"iconNull={self._tray.icon().isNull()}",
-                file=sys.stderr,
-            )
 
     # ── Menu construction ───────────────────────────────────────────────────
     def _build_menu(self) -> QMenu:
@@ -312,31 +320,23 @@ class HermesTray:
         #   4. ``xdg-open`` last-resort (LibreOffice is its default on
         #      Manjaro KDE, hence why we don't pick it eagerly)
         #
-        # The launcher is fire-and-forget; we don't wait. Note we use
-        # ``shlex.split`` rather than ``shell=True`` so the arguments
-        # are tokenized safely (a hostile filename like
-        # ``$VISUAL='evil-cmd; rm -rf /'`` would have been a real
-        # shell-injection vector). S602/S607 ruff warnings are
-        # suppressed because we control both the command surface
-        # and the visible UI affordance (this dialog).
-        import shlex as _shlex
-
-        cmd_str = self._pick_editor_command(str(config))
-        cmd_argv = _shlex.split(cmd_str) if cmd_str else ["xdg-open", str(config)]
-        subprocess.Popen(cmd_argv)  # noqa: S603
+        # The launcher is fire-and-forget; we don't wait. No shell is
+        # involved anywhere on this path — the argv goes straight to
+        # ``execvp``, so a value like ``$VISUAL='evil-cmd; rm -rf /'``
+        # is a (nonexistent) binary name, not two commands.
+        self._launch(self._editor_argv(str(config)))
 
     @staticmethod
-    def _pick_editor_command(target: str) -> str:
-        """Return a shell-runnable command that opens `target`.
+    def _editor_argv(target: str) -> list[str]:
+        """Return the argv that opens `target` in the user's editor.
 
-        Centralised so it's easy to test (and so we don't sprinkle
-        ``$VISUAL`` lookups through the code). The launcher is
-        expected to be shell-quoted by ``subprocess.Popen(shell=True)``
-        — we hand it a single string so the shell can resolve
-        ``$VISUAL`` / ``$EDITOR`` at run-time, the same way a user
-        would.
+        An argv list, not a command string: the target is appended as
+        one element, so a config path containing a space survives. The
+        earlier version returned a string that the caller re-split with
+        ``shlex.split``, which tore such a path into two arguments.
         """
         import os
+        import shlex
         import shutil
 
         # 1 / 2 — honour user env vars. ``$VISUAL`` precedes ``$EDITOR``
@@ -350,15 +350,11 @@ class HermesTray:
                 val.startswith("'") and val.endswith("'")
             ):
                 val = val[1:-1]
-            if val and shutil.which(val.split()[0]):
-                # We always append the target path as a separate
-                # token. The shell tokens it for us; the editor's
-                # own argv parser picks the file up correctly. This
-                # means a ``$VISUAL='code -w'`` setting still works
-                # (``code -w /tmp/foo.yaml`` opens the file with
-                # ``--wait``), and a plain ``$VISUAL='vim'`` setting
-                # becomes ``vim /tmp/foo.yaml`` without surprises.
-                return f"{val} {target}"
+            words = shlex.split(val)
+            # ``$VISUAL='code -w'`` is a launcher plus its own flags;
+            # only the first word is a binary we can validate.
+            if words and shutil.which(words[0]):
+                return [*words, target]
 
         # 3 — common GUI/text editors that ship with Manjaro KDE or
         # Kubuntu. Order matters: prefer graphical editors so the
@@ -366,21 +362,73 @@ class HermesTray:
         for editor in ("kate", "kwrite", "gedit", "xed", "micro", "nano", "vim", "vi"):
             path = shutil.which(editor)
             if path:
-                return f"{path} {target}"
+                return [path, target]
 
         # 4 — last resort. On Manjaro KDE this typically hands the
         # file to LibreOffice, which is not what we want for a
-        # YAML config, but it's better than nothing.
-        return f"xdg-open {target}"
+        # YAML config, but it's better than nothing. Not validated
+        # with ``which`` on purpose: if it is missing too, ``_launch``
+        # is the single place that reports the failure.
+        return ["xdg-open", target]
 
     def _open_cli(self) -> None:
         cli = _paths.hermes_bin()
         if cli.exists():
-            # `konsole` is the user's terminal, the bin path is read-only
-            # and the user explicitly chose this action. Safe.
-            subprocess.Popen(["konsole", "-e", str(cli)])  # noqa: S603,S607
+            command = [str(cli)]
         else:
-            subprocess.Popen(["konsole", "-e", "bash", "-c", "hermes; exec bash"])  # noqa: S603,S607
+            # No installed binary — fall back to whatever ``hermes`` the
+            # shell finds, and keep the window open afterwards so the
+            # user can read the error if there is none.
+            import shutil
+
+            shell = shutil.which("bash") or "/bin/sh"
+            command = [shell, "-c", f"hermes; exec {shell}"]
+
+        argv = self._terminal_argv(command)
+        if argv is None:
+            QMessageBox.warning(
+                None,
+                _("Error"),
+                _("No terminal emulator found. Tried: {tried}").format(
+                    tried=", ".join(name for name, _flag in TERMINALS)
+                ),
+            )
+            return
+        self._launch(argv)
+
+    @staticmethod
+    def _terminal_argv(command: list[str]) -> list[str] | None:
+        """Wrap `command` in the first terminal emulator we can find.
+
+        ``None`` means no terminal is installed. The tray used to assume
+        ``konsole``, so the menu item raised FileNotFoundError inside a
+        Qt slot on every non-KDE desktop.
+        """
+        import shutil
+
+        for name, exec_flag in TERMINALS:
+            path = shutil.which(name)
+            if path:
+                return [path, exec_flag, *command]
+        return None
+
+    def _launch(self, argv: list[str]) -> None:
+        """Fire-and-forget spawn that reports failure instead of raising.
+
+        Every caller here runs from a menu action. An exception escaping
+        a Qt slot is printed to stderr at best — from the user's side the
+        menu item simply does nothing.
+        """
+        try:
+            subprocess.Popen(argv)  # noqa: S603
+        except OSError as exc:
+            QMessageBox.warning(
+                None,
+                _("Error"),
+                _("Could not run {command}:\n{error}").format(
+                    command=" ".join(argv), error=exc.strerror or type(exc).__name__
+                ),
+            )
 
     def _show_about(self) -> None:
         QMessageBox.information(
