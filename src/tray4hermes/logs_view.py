@@ -67,6 +67,29 @@ except ImportError:
     def _(s: str) -> str:  # type: ignore[no-redef]  # noqa: ANN001
         return s
 
+
+def _as_int(value: object, default: int) -> int:
+    """Coerce a value read from JSON to int, or fall back to `default`."""
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_geometry(value: object) -> bytes | None:
+    """Decode a base64 geometry blob; anything unusable means "no geometry".
+
+    ``binascii.Error`` is a ``ValueError`` subclass, which is why a
+    corrupted blob used to look like a broken settings file.
+    """
+    if not isinstance(value, str):
+        return None
+    try:
+        return _b64decode(value, validate=True)
+    except ValueError:
+        return None
+
+
 # A separate dataclass for log-viewer-only settings. Kept separate from
 # TrayState so changing "max log lines" doesn't touch the user's
 # selected_profile persistence.
@@ -115,23 +138,29 @@ class LogSettings:
 
     @classmethod
     def from_json(cls, data: dict[str, object]) -> LogSettings:
-        levels = data.get("show_levels", ("ERROR", "WARNING", "INFO", "DEBUG", "TRACE"))
+        """Rebuild from a state.json fragment. Never raises.
+
+        Every field falls back to its own default independently. The
+        earlier version wrapped the whole call in one try/except, so a
+        single damaged value — a truncated geometry blob, a hand-edited
+        ``"max_lines": {}`` — discarded the user's entire configuration.
+        """
+        defaults = cls()
+        levels = data.get("show_levels")
         return cls(
-            max_lines=int(data.get("max_lines", 2000)),
-            auto_scroll=bool(data.get("auto_scroll", True)),
-            word_wrap=bool(data.get("word_wrap", False)),
-            font_size=int(data.get("font_size", 9)),
+            max_lines=_as_int(data.get("max_lines"), defaults.max_lines),
+            auto_scroll=bool(data.get("auto_scroll", defaults.auto_scroll)),
+            word_wrap=bool(data.get("word_wrap", defaults.word_wrap)),
+            font_size=_as_int(data.get("font_size"), defaults.font_size),
             show_levels=tuple(str(x) for x in levels)
             if isinstance(levels, (list, tuple))
-            else cls.show_levels,
-            show_tracebacks=bool(data.get("show_tracebacks", True)),
-            time_window_minutes=int(data.get("time_window_minutes", 0)),
-            reverse_order=bool(data.get("reverse_order", False)),
-            window_geometry=(
-                _b64decode(data["window_geometry"])
-                if isinstance(data.get("window_geometry"), str)
-                else None
+            else defaults.show_levels,
+            show_tracebacks=bool(data.get("show_tracebacks", defaults.show_tracebacks)),
+            time_window_minutes=_as_int(
+                data.get("time_window_minutes"), defaults.time_window_minutes
             ),
+            reverse_order=bool(data.get("reverse_order", defaults.reverse_order)),
+            window_geometry=_as_geometry(data.get("window_geometry")),
         )
 
     @classmethod
@@ -139,46 +168,47 @@ class LogSettings:
         return cls()
 
 
+def _seed_from_tray_defaults() -> LogSettings:
+    """Viewer settings for a user who has never opened the viewer before.
+
+    The starting point is the global tray configuration, so what the
+    user picked in the Settings dialog is what they get on first open.
+    """
+    from tray4hermes.tray_settings import load_tray_settings
+
+    defaults = load_tray_settings()
+    return LogSettings(
+        max_lines=defaults.default_max_lines,
+        auto_scroll=defaults.default_auto_scroll,
+        word_wrap=defaults.default_word_wrap,
+        show_levels=defaults.default_show_levels,
+    )
+
+
 def _load_log_settings() -> LogSettings:
     """Read from tray4hermes state.json (under 'log_settings' key).
 
-    Falls back to default() if missing or malformed. Never raises.
+    Falls back to the tray defaults if missing or malformed. Never raises.
     """
     # TrayState is a frozen dataclass; we add log settings to its JSON
     # shape but keep the dataclass clean by reading from a sibling key
     # in the same file.
+    import json as _json
+
     from tray4hermes.paths import tray_state_file
 
     try:
-        import json as _json
-
         with open(tray_state_file()) as f:
             data = _json.load(f)
-        raw_log_settings = data.get("log_settings")
-        if isinstance(raw_log_settings, dict):
-            return LogSettings.from_json(raw_log_settings)
+    except (OSError, ValueError):
+        # OSError covers the missing file; ValueError covers unparseable
+        # JSON. Field-level damage is handled inside `from_json`.
+        data = {}
 
-        # No last-used viewer state yet: seed it from the global tray
-        # defaults configured in TraySettingsDialog.
-        from tray4hermes.tray_settings import load_tray_settings
-
-        defaults = load_tray_settings()
-        return LogSettings(
-            max_lines=defaults.default_max_lines,
-            auto_scroll=defaults.default_auto_scroll,
-            word_wrap=defaults.default_word_wrap,
-            show_levels=defaults.default_show_levels,
-        )
-    except (FileNotFoundError, OSError, ValueError):
-        from tray4hermes.tray_settings import load_tray_settings
-
-        defaults = load_tray_settings()
-        return LogSettings(
-            max_lines=defaults.default_max_lines,
-            auto_scroll=defaults.default_auto_scroll,
-            word_wrap=defaults.default_word_wrap,
-            show_levels=defaults.default_show_levels,
-        )
+    raw_log_settings = data.get("log_settings") if isinstance(data, dict) else None
+    if isinstance(raw_log_settings, dict):
+        return LogSettings.from_json(raw_log_settings)
+    return _seed_from_tray_defaults()
 
 
 def _save_log_settings(settings: LogSettings) -> None:
@@ -416,7 +446,12 @@ class LogTextEdit(QPlainTextEdit):
             block_number += 1
 
     def keyPressEvent(self, event) -> None:  # noqa: N802
-        """Handle Ctrl+C / Ctrl+A / Ctrl+F / F3 / Shift+F3 for log ergonomics."""
+        """Handle Ctrl+C / Ctrl+A for log ergonomics.
+
+        Search keys (Ctrl+F, F3, Shift+F3) are deliberately *not* handled
+        here — the search term lives in the parent dialog's find bar, so
+        the dialog owns those shortcuts and they never reach us.
+        """
         if event.modifiers() & Qt.ControlModifier:
             if event.key() == Qt.Key_C:
                 self.copy()
@@ -424,12 +459,6 @@ class LogTextEdit(QPlainTextEdit):
             if event.key() == Qt.Key_A:
                 self.selectAll()
                 return
-            if event.key() == Qt.Key_F:
-                # Find handled by parent dialog; ignore here.
-                return
-        if event.key() == Qt.Key_F3:
-            self._find_next(backward=bool(event.modifiers() & Qt.ShiftModifier))
-            return
         super().keyPressEvent(event)
 
     def find_text(self, text: str, backward: bool = False) -> bool:
@@ -438,6 +467,11 @@ class LogTextEdit(QPlainTextEdit):
         if backward:
             flags |= QTextDocument.FindBackward
         cursor = self.textCursor()
+        # Collapse the previous match before searching again. Left as-is,
+        # a backward search would start at the *end* of the current
+        # selection and match it a second time — F3, F3, Shift+F3 would
+        # never leave the second hit.
+        cursor.setPosition(cursor.selectionStart() if backward else cursor.selectionEnd())
         found = self.document().find(text, cursor, flags)
         if not found.isNull():
             self.setTextCursor(found)
@@ -465,6 +499,9 @@ class LogSettingsDialog(QDialog):
 
     def __init__(self, current: LogSettings, parent=None) -> None:
         super().__init__(parent)
+        # Kept so `result_settings()` can carry through the fields this
+        # dialog has no widget for (see there).
+        self._current = current
         self.setWindowTitle(_("Log viewer — settings"))
         # Brand icon so title bar / taskbar entry don't fall back to the
         # default Qt placeholder glyph when this dialog is opened outside
@@ -581,7 +618,13 @@ class LogSettingsDialog(QDialog):
         return lbl
 
     def result_settings(self) -> LogSettings:
-        """Build a fresh LogSettings from the dialog's current widget state."""
+        """Build a fresh LogSettings from the dialog's current widget state.
+
+        Fields without a widget here — currently ``window_geometry`` —
+        are carried over from the settings we were opened with. Building
+        them from widget state alone means confirming this dialog resets
+        the viewer's window position on every visit.
+        """
         levels = tuple(lvl for lvl, cb in self._level_checks.items() if cb.isChecked())
         tw_idx = self._time_window.currentIndex()
         tw_key = self._tw_keys[tw_idx] if 0 <= tw_idx < len(self._tw_keys) else "all"
@@ -594,6 +637,7 @@ class LogSettingsDialog(QDialog):
             show_tracebacks=self._show_tracebacks.isChecked(),
             time_window_minutes=self._tw_map.get(tw_key, 0),
             reverse_order=self._reverse.isChecked(),
+            window_geometry=self._current.window_geometry,
         )
 
 
@@ -645,21 +689,29 @@ class LogDialog(QDialog):
             cb.stateChanged.connect(self._on_level_toggle)
         self._tb_checkbox.stateChanged.connect(self._on_traceback_toggle)
 
-        # Keyboard shortcuts
-        QAction(_("Find"), self, shortcut="Ctrl+F", triggered=self._focus_search)
-        QAction(
+        # Keyboard shortcuts. A QAction only reaches the shortcut map once
+        # it belongs to a widget's action list — constructing it with
+        # ``parent=self`` gives it an owner, not a key binding. Hence the
+        # explicit ``addAction``.
+        #
+        # Esc is missing on purpose: as a shortcut it would shadow
+        # QDialog's built-in reject and the viewer could no longer be
+        # closed with it. It is handled in ``keyPressEvent`` instead.
+        self._act_find = QAction(_("Find"), self, shortcut="Ctrl+F", triggered=self._focus_search)
+        self._act_find_next = QAction(
             _("Find next"),
             self,
             shortcut="F3",
-            triggered=lambda: self._editor.find_text(self._search.text()),
+            triggered=lambda: self._find(backward=False),
         )
-        QAction(
+        self._act_find_prev = QAction(
             _("Find prev"),
             self,
             shortcut="Shift+F3",
-            triggered=lambda: self._editor.find_text(self._search.text(), backward=True),
+            triggered=lambda: self._find(backward=True),
         )
-        QAction(_("Escape"), self, shortcut="Esc", triggered=self._close_search)
+        for action in (self._act_find, self._act_find_next, self._act_find_prev):
+            self.addAction(action)
 
     # ── UI construction ───────────────────────────────────────────────────
     def _build_toolbar(self) -> None:
@@ -760,11 +812,11 @@ class LogDialog(QDialog):
         self._search = QLineEdit()
         self._search.setPlaceholderText(_("Ctrl+F"))
         self._search.setMaximumWidth(220)
-        self._search.returnPressed.connect(lambda: self._editor.find_text(self._search.text()))
+        self._search.returnPressed.connect(lambda: self._find())
         tb.addWidget(self._search)
 
         btn_next = QPushButton(_("Find"))
-        btn_next.clicked.connect(lambda: self._editor.find_text(self._search.text()))
+        btn_next.clicked.connect(lambda: self._find())
         tb.addWidget(btn_next)
 
         tb.addSeparator()
@@ -818,7 +870,17 @@ class LogDialog(QDialog):
                 want = max(self._settings.max_lines * 200, 256 * 1024)
                 f.seek(-min(want, size), os.SEEK_END)
                 data = f.read()
-        except OSError:
+        except OSError as exc:
+            # Say so in the status bar. Returning silently left the
+            # previous read's line/error counts on screen, which is
+            # worse than an empty window: the viewer looked healthy
+            # while showing stale numbers.
+            self._status.setText(
+                "  "
+                + _("Cannot read {path}: {error}").format(
+                    path=log, error=exc.strerror or type(exc).__name__
+                )
+            )
             return
 
         text = data.decode("utf-8", errors="replace")
@@ -983,12 +1045,21 @@ class LogDialog(QDialog):
     def _on_reverse_toggle(self, checked: bool) -> None:
         self._update_with(reverse_order=checked)
 
+    def _find(self, backward: bool = False) -> bool:
+        """Jump to the next (or previous) occurrence of the search term."""
+        term = self._search.text()
+        if not term:
+            return False
+        return self._editor.find_text(term, backward=backward)
+
     def _focus_search(self) -> None:
         self._search.setFocus()
         self._search.selectAll()
 
     def _close_search(self) -> None:
+        """Leave the find bar: drop the term and give the editor focus back."""
         self._search.clear()
+        self._editor.setFocus()
 
     def _open_settings(self) -> None:
         """Open the full settings dialog and apply all changes on OK.
@@ -1033,11 +1104,15 @@ class LogDialog(QDialog):
         _save_log_settings(self._settings)
         super().closeEvent(event)
 
-    # Esc closes dialog (override default reject)
     def keyPressEvent(self, event) -> None:  # noqa: N802
+        """Esc leaves the find bar; anywhere else it closes the viewer.
+
+        Kept as an event handler rather than a QAction shortcut — a
+        shortcut would win over QDialog's built-in reject everywhere in
+        the window, and Esc would stop closing the dialog at all.
+        """
         if event.key() == Qt.Key_Escape and self._search.hasFocus():
-            self._search.clearFocus()
-            self._editor.setFocus()
+            self._close_search()
             return
         super().keyPressEvent(event)
 

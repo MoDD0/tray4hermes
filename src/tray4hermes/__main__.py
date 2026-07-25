@@ -27,6 +27,27 @@ from tray4hermes import paths as _paths
 from tray4hermes.i18n import available_languages
 from tray4hermes.i18n import install as _i18n_install
 
+# Sentinel for ``--language`` used without a value: "tell me which
+# languages this build ships". A real language code can never collide
+# with it — ISO 639-1 codes are two letters.
+LIST_LANGUAGES = "?list-languages"
+
+
+def _resolve_language(cli_value: str | None, saved: str | None) -> str | None:
+    """Decide which language to bind, given the flag and the saved setting.
+
+    Priority: explicit ``--language`` → saved ``TraySettings.language``
+    → ``None``, which leaves gettext to follow the OS environment.
+
+    ``--language none`` is an explicit request for the environment, so
+    it has to override the saved value rather than fall through to it.
+    """
+    if cli_value is None:
+        return saved
+    if cli_value.strip().lower() in ("", "none"):
+        return None
+    return cli_value
+
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     """Keep argparse deliberately small — flags are documented in README.
@@ -36,8 +57,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     - ``--version``: print version and exit.
     - ``--help``:    print usage and exit.
     - ``--language`` / ``-L``: ISO 639-1 short code. ``--language cs``
-      forces Czech. ``--language none`` (or ``--language`` with no
-      value) reads from the OS environment.
+      forces Czech, ``--language none`` reads from the OS environment,
+      and ``--language`` with no value lists what the build ships.
     """
     parser = argparse.ArgumentParser(
         prog="tray4hermes",
@@ -58,6 +79,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "-L",
         "--language",
+        nargs="?",
+        const=LIST_LANGUAGES,
         default=None,
         metavar="CODE",
         help=(
@@ -81,14 +104,13 @@ def main() -> int:
     widgets constructed later pick up the right strings.
     """
     args = _parse_args(sys.argv[1:])
-    language_arg: str | None = args.language
 
-    # The ``--language`` flag with no argument is a short-circuit
-    # to list available languages and exit; convenient for the
-    # README snippet "what languages does this build support?"
-    if "--language" in sys.argv[1:] and (
-        "--language" == sys.argv[-1] or sys.argv[-2:] == ["--language", ""]
-    ):
+    # ``--language`` with no value is a short-circuit that lists the
+    # available languages and exits; convenient for the README snippet
+    # "what languages does this build support?". It returns before the
+    # single-instance lock, so asking the question never disturbs a
+    # running tray.
+    if args.language == LIST_LANGUAGES:
         print(
             "Available languages:",
             ", ".join(available_languages()) or "(none — no compiled .mo files found)",
@@ -112,8 +134,7 @@ def main() -> int:
         import sys as _sys
 
         print(f"[tray4hermes] could not load saved language: {e}", file=_sys.stderr)
-    effective_lang = language_arg or saved_lang
-    _i18n_install(language=effective_lang)
+    _i18n_install(language=_resolve_language(args.language, saved_lang))
 
     from tray4hermes.lock import acquire, release
 

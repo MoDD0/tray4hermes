@@ -452,17 +452,22 @@ tray4hermes/
 └── tests/
     ├── conftest.py
     ├── test_app.py           # Qt offscreen — tray menu a akce
-    ├── test_editor_picker.py # výběr editoru pro „Otevřít konfiguraci"
+    ├── test_cli.py           # zpracování argumentů `python -m tray4hermes`
+    ├── test_gateway_control.py   # akce systemctl, přepínání profilů
     ├── test_i18n_build.py    # build skript README
     ├── test_i18n_parity.py   # build + lint skripty zapojené do pytestu
-    ├── test_i18n_runtime.py  # gettext katalogy, jazyk msgidů
+    ├── test_i18n_runtime.py  # gettext katalogy, jazyk msgid
+    ├── test_launchers.py     # výběr a spuštění editoru / terminálu
     ├── test_lock.py          # zámek jediné instance
-    ├── test_readme_freshness.py  # generovaná README sedí na své zdroje
+    ├── test_log_refresh.py   # co prohlížeč ukáže, když log nejde přečíst
+    ├── test_log_settings.py  # persistence nastavení prohlížeče
+    ├── test_log_shortcuts.py # Ctrl+F / F3 / Shift+F3 / Esc přes reálné klávesy
+    ├── test_readme_freshness.py  # zkompilovaná README odpovídají zdrojům
     ├── test_readme_parity.py # parita obrázků mezi en.md a cs.md
     ├── test_settings_dialog.py   # dialog nastavení prohlížeče logu
-    ├── test_state.py         # agregace a perzistence stavu
+    ├── test_state.py         # agregace stavu a persistence
     ├── test_tray_settings.py # globální nastavení trayky
-    └── test_versioning.py    # pomocník na SemVer bump
+    └── test_versioning.py    # pomocník pro SemVer bump
 ```
 
 ## Licence
