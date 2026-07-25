@@ -38,10 +38,14 @@ _PLACEHOLDER = "<!-- tray4hermes:version -->"
 def test_rewrite_version_emits_markdown_badge_on_its_own_line(i18n_module) -> None:
     src = f"# tray4hermes\n\n{_PLACEHOLDER}\n[![License: MIT](x)](y)\nbody\n"
     out = i18n_module.rewrite_version_placeholder(src, "9.9.9")
+    # The badge links to the repo, not to /releases: there is no release
+    # and none is planned (the only tag is the pre-rewrite archive), so
+    # a /releases target sends every reader to an empty page.
     assert (
         "[![version: 9.9.9](https://img.shields.io/badge/version-9.9.9-blue.svg)]"
-        "(https://github.com/MoDD0/tray4hermes/releases)" in out
+        "(https://github.com/MoDD0/tray4hermes)" in out
     )
+    assert "/releases" not in out, "the badge must not point at an empty releases page"
     assert "<img" not in out, "the badge must be markdown, not an inline HTML tag"
 
 

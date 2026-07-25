@@ -334,7 +334,10 @@ _VERSION_BLOCK_RE = re.compile(
     r"(?:\[!\[version:[^\n]*\n)?",
     re.MULTILINE,
 )
-_RELEASES_URL = "https://github.com/MoDD0/tray4hermes/releases"
+# The badge links back to the repository. It used to point at
+# ``/releases``, which is an empty page — no release has ever been
+# cut and none is planned; the only tag is the pre-rewrite archive.
+_BADGE_URL = "https://github.com/MoDD0/tray4hermes"
 
 
 def rewrite_version_placeholder(md: str, version: str) -> str:
@@ -353,7 +356,7 @@ def rewrite_version_placeholder(md: str, version: str) -> str:
     badge = (
         f"[![version: {version}]"
         f"(https://img.shields.io/badge/version-{version}-blue.svg)]"
-        f"({_RELEASES_URL})"
+        f"({_BADGE_URL})"
     )
     return _VERSION_BLOCK_RE.sub(f"{_VERSION_PLACEHOLDER}\n{badge}\n", md, count=1)
 
