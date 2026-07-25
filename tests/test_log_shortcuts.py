@@ -44,10 +44,10 @@ def dialog(hermes_home: Path, qtbot):
     from tray4hermes.logs_view import LogDialog
 
     dlg = LogDialog()
-    # Wide enough that the whole toolbar fits. At the default 900×500 the
-    # find bar overflows into the toolbar's extension popup, where it is
-    # not visible — and `setFocus()` on a hidden widget does nothing.
-    dlg.resize(1800, 600)
+    # Deliberately the *default* size. These tests used to run at 1800×600
+    # to dodge the toolbar overflow bug; keeping that workaround would mean
+    # the suite never exercised the size the user actually gets.
+    dlg.resize(900, 500)
     dlg.show()
     qtbot.waitExposed(dlg)
     # Shortcuts with the default WindowShortcut context are only
@@ -146,3 +146,44 @@ class TestEscape:
         QTest.keyClick(dialog._editor, Qt.Key_Escape)
 
         assert not dialog.isVisible(), "Escape in the editor should close the viewer"
+
+
+class TestFindBarFitsAtAnyWidth:
+    """The find bar must be usable at the dialog's default 900×500.
+
+    It used to sit in the main toolbar, which needs roughly 1975 px to
+    lay out in full. At 900 px everything past the level filters spilled
+    into the toolbar's extension popup, so `_search` reported
+    `isVisible() == False` — and `setFocus()` on a hidden widget is a
+    no-op. Ctrl+F therefore did nothing at the default size, while the
+    very same key worked once the window was dragged wide enough.
+    """
+
+    @pytest.mark.parametrize("width", [700, 900, 1800])
+    def test_ctrl_f_reveals_and_focuses_the_search_box(self, dialog, width: int) -> None:
+        dialog.resize(width, 500)
+        QApplication.processEvents()
+
+        QTest.keyClick(dialog, Qt.Key_F, Qt.ControlModifier)
+
+        assert dialog._search.isVisible(), (
+            f"search box is not visible at {width} px — it overflowed out of view"
+        )
+        assert dialog._search.hasFocus(), f"Ctrl+F did not focus the search box at {width} px"
+
+    def test_find_bar_is_hidden_until_requested(self, dialog) -> None:
+        """It occupies no space until Ctrl+F asks for it."""
+        assert not dialog._find_bar.isVisible()
+
+    def test_escape_hides_the_find_bar_again(self, dialog) -> None:
+        QTest.keyClick(dialog, Qt.Key_F, Qt.ControlModifier)
+        assert dialog._find_bar.isVisible()
+
+        QTest.keyClick(dialog._search, Qt.Key_Escape)
+
+        assert not dialog._find_bar.isVisible(), "Escape left the find bar on screen"
+        assert dialog.isVisible(), "Escape closed the whole viewer instead of the find bar"
+
+    def test_search_box_does_not_live_in_the_toolbar(self, dialog) -> None:
+        """Structural guard: back in the toolbar it would overflow again."""
+        assert dialog._search not in dialog._toolbar.findChildren(type(dialog._search))

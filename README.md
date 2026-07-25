@@ -1,7 +1,7 @@
 # tray4hermes
 
 <!-- tray4hermes:version -->
-[![version: 2.0.14](https://img.shields.io/badge/version-2.0.14-blue.svg)](https://github.com/MoDD0/tray4hermes)
+[![version: 2.0.15](https://img.shields.io/badge/version-2.0.15-blue.svg)](https://github.com/MoDD0/tray4hermes)
 [![CI](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml/badge.svg)](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -84,7 +84,9 @@ The log viewer reads `~/.hermes/logs/gateway.log` and provides:
 - **Reverse order** — flip to `journalctl` style (newest at top); every new
   entry appears first
 - **Max lines** spinbox — rolling buffer (0 = unlimited). Steps by 1; type any value manually
-- **Search** (`Ctrl+F` → `F3` next, `Shift+F3` prev, `Esc` close)
+- **Search** in a collapsible find bar under the log (`Ctrl+F` opens and
+  focuses it, `F3` next, `Shift+F3` prev, `Esc` closes). It deliberately sits
+  outside the toolbar, so it stays reachable at any window width
 - **Auto-scroll toggle** (default ON; OFF = preserve position on refresh).
   While investigating, the viewer preserves a manually selected scroll
   position even when auto-scroll is ON; it only follows the live edge when

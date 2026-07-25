@@ -332,3 +332,6 @@ msgstr "ERR"
 
 msgid "WARN"
 msgstr "WARN"
+
+msgid "Close the find bar (Esc)"
+msgstr "Zavřít vyhledávací lištu (Esc)"
