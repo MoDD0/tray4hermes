@@ -452,7 +452,10 @@ tray4hermes/
 │       ├── paths.py          # all filesystem paths and tunables
 │       ├── icons.py          # QPainter icon factory
 │       ├── lock.py           # single-instance lock
-│       ├── logs_view.py      # LogDialog (full-featured viewer)
+│       ├── log_dialog.py     # LogDialog — editor, gutter, toolbars, find bar
+│       ├── log_settings.py   # viewer preferences: dataclass, persistence, dialog
+│       ├── log_parse.py      # level / timestamp / traceback parsing (no Qt widgets)
+│       ├── log_theme.py      # colours, fonts and filter constants shared by both dialogs
 │       ├── tray_settings.py  # global settings dialog (language, defaults)
 │       ├── i18n.py           # gettext wrapper + runtime language switch
 │       ├── py.typed          # PEP 561 marker
@@ -471,9 +474,11 @@ tray4hermes/
     ├── test_i18n_runtime.py  # gettext catalogs, msgid language
     ├── test_launchers.py     # editor / terminal resolution and spawning
     ├── test_lock.py          # single-instance lock
+    ├── test_log_parse.py     # level / timestamp parsing, both regex engines
     ├── test_log_refresh.py   # what the viewer shows when the log is unreadable
     ├── test_log_settings.py  # viewer settings persistence
     ├── test_log_shortcuts.py # Ctrl+F / F3 / Shift+F3 / Esc, real key path
+    ├── test_log_toolbar.py   # toolbar rows stay on screen at realistic widths
     ├── test_readme_freshness.py  # compiled READMEs match their sources
     ├── test_readme_parity.py # image parity between en.md and cs.md
     ├── test_settings_dialog.py   # log-viewer settings dialog

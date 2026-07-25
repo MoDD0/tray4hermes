@@ -41,7 +41,7 @@ def dialog(hermes_home: Path, qtbot):
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text(_LOG)
 
-    from tray4hermes.logs_view import LogDialog
+    from tray4hermes.log_dialog import LogDialog
 
     dlg = LogDialog()
     # Deliberately the *default* size. These tests used to run at 1800×600
@@ -69,7 +69,7 @@ class TestEditorKeyHandling:
         """A bare LogTextEdit used to call `self._find_next(...)`, which
         does not exist anywhere in the package — every F3 with focus in
         the editor raised AttributeError."""
-        from tray4hermes.logs_view import LogTextEdit
+        from tray4hermes.log_dialog import LogTextEdit
 
         editor = LogTextEdit()
         qtbot.addWidget(editor)

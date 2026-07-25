@@ -16,7 +16,7 @@ pytestmark = pytest.mark.usefixtures("qtbot")
 
 @pytest.fixture
 def dialog(hermes_home, qtbot):
-    from tray4hermes.logs_view import LogDialog
+    from tray4hermes.log_dialog import LogDialog
 
     dlg = LogDialog()
     qtbot.addWidget(dlg)

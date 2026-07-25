@@ -148,7 +148,7 @@ def test_dialog_language_system_default(hermes_home: Path, qtbot) -> None:
 
 
 def test_log_settings_use_tray_defaults_on_first_open(hermes_home: Path) -> None:
-    from tray4hermes.logs_view import _load_log_settings
+    from tray4hermes.log_settings import load_log_settings
 
     save_tray_settings(
         TraySettings(
@@ -158,7 +158,7 @@ def test_log_settings_use_tray_defaults_on_first_open(hermes_home: Path) -> None
             default_word_wrap=True,
         )
     )
-    settings = _load_log_settings()
+    settings = load_log_settings()
     assert settings.max_lines == 750
     assert settings.show_levels == ("ERROR", "WARNING")
     assert settings.auto_scroll is False
@@ -168,10 +168,13 @@ def test_log_settings_use_tray_defaults_on_first_open(hermes_home: Path) -> None
 def test_log_settings_use_tray_defaults_when_state_file_is_missing(
     hermes_home: Path, monkeypatch
 ) -> None:
-    from tray4hermes.logs_view import _load_log_settings
+    from tray4hermes.log_settings import load_log_settings
 
+    # Patched where it is *used*, not where it is defined. `log_settings`
+    # binds the name at import time, so patching the defining module has
+    # no effect on the reference this code path actually calls.
     monkeypatch.setattr(
-        "tray4hermes.tray_settings.load_tray_settings",
+        "tray4hermes.log_settings.load_tray_settings",
         lambda: TraySettings(
             default_max_lines=1250,
             default_show_levels=("INFO",),
@@ -179,7 +182,7 @@ def test_log_settings_use_tray_defaults_when_state_file_is_missing(
             default_word_wrap=True,
         ),
     )
-    settings = _load_log_settings()
+    settings = load_log_settings()
     assert settings.max_lines == 1250
     assert settings.show_levels == ("INFO",)
     assert settings.auto_scroll is False

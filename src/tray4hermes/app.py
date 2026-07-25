@@ -45,7 +45,7 @@ except ImportError:
         return s
 
 
-from tray4hermes.logs_view import LogDialog
+from tray4hermes.log_dialog import LogDialog
 from tray4hermes.paths import REFRESH_INTERVAL_MS, SERVICE
 from tray4hermes.state import (
     ACTIVATING,
