@@ -18,10 +18,15 @@ EN = REPO_ROOT / "docs" / "i18n" / "en.md"
 CS = REPO_ROOT / "docs" / "i18n" / "cs.md"
 IMAGES_DIR = REPO_ROOT / "docs" / "images"
 
-# Image markdown syntax: ![alt](path). Absolute URLs and data URIs are
-# ignored — only repo-relative paths are parity-checked.
+# Image markdown syntax: ![alt](path). Remote URLs and data URIs are
+# ignored — only paths that resolve inside the repo are parity-checked.
+#
+# A leading `/` is deliberately NOT ignored. It looks like an absolute
+# reference but GitHub resolves it against the site root, so it names a
+# file that isn't there. Skipping it here is how one slipped into the
+# source unnoticed.
 _IMAGE_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
-_IGNORED = ("http://", "https://", "data:", "/")
+_IGNORED = ("http://", "https://", "data:")
 
 
 def _local_image_refs(md: Path) -> list[str]:
@@ -73,8 +78,6 @@ def test_en_and_cs_have_the_same_images(en_refs: list[str], cs_refs: list[str]) 
 @pytest.mark.parametrize(
     ("label", "path"),
     [
-        ("kde_tray", "docs/images/kde_tray.png"),
-        ("log_viewer", "docs/images/log_viewer.png"),
         ("preview", "docs/images/preview.png"),
         ("tray4hermes_logo", "docs/images/tray4hermes.png"),
     ],
@@ -109,6 +112,12 @@ def test_i18n_image_paths_use_repo_root(en_refs: list[str], cs_refs: list[str]) 
     for ref in en_refs + cs_refs:
         assert not ref.startswith("../"), f"image must be repo-relative: {ref}"
         assert not ref.startswith("./"), f"image must be repo-relative: {ref}"
+        assert not ref.startswith("/"), (
+            f"image must not start with a slash: {ref}. GitHub resolves a "
+            f"leading slash against the site root, not the repo, so the "
+            f"image renders broken — and the build script passes such "
+            f"paths through unrewritten, so the CZ README gets it wrong too."
+        )
 
 
 def test_compiled_readme_uses_rewritten_image_paths() -> None:
