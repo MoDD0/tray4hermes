@@ -309,8 +309,12 @@ class LogDialog(QDialog):
         self._timer.start(self.LOG_REFRESH_MS)
 
         self._apply_settings()
+        # No _update_status() here: `_refresh` already ends with one on the
+        # happy path, and on a read error it puts the failure in the status
+        # bar and returns. Calling it again overwrote that failure with a
+        # cheerful "Visible: 0", so a viewer opened over an unreadable log
+        # claimed the log was empty until the timer fired.
         self._refresh()
-        self._update_status()
 
         # Re-apply level filter when toggles change
         for cb in self._level_checkboxes.values():
