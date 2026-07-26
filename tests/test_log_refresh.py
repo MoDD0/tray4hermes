@@ -34,6 +34,26 @@ def test_missing_log_is_reported_in_the_status_bar(dialog, hermes_home) -> None:
     )
 
 
+def test_the_error_survives_opening_the_dialog(hermes_home, qtbot) -> None:
+    """Every other test here calls `_refresh()` by hand, which is not how
+    a user meets this code. Opening the window ran `_refresh()` and then
+    `_update_status()`, and the second call overwrote the first one's
+    message with a cheerful `Visible: 0` — so the viewer claimed an empty
+    log rather than an unreadable one until the 2-second timer fired.
+    """
+    from tray4hermes.log_dialog import LogDialog
+
+    log = hermes_home / "logs" / "gateway.log"
+    assert not log.exists(), "precondition: the gateway has never written a log"
+
+    dlg = LogDialog()
+    qtbot.addWidget(dlg)
+
+    assert str(log) in dlg._status.text(), (
+        f"opening the viewer discarded the read error; got: {dlg._status.text()!r}"
+    )
+
+
 def test_unreadable_log_is_reported_in_the_status_bar(dialog, hermes_home, monkeypatch) -> None:
     """Not just "missing" — any OSError (permissions, mid-rotation,
     I/O error) has to surface."""
