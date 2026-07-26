@@ -164,6 +164,51 @@ než první volání modelu skutečně projde.
 - Běžící `hermes-gateway.service` pod `systemd --user`
 - `loginctl enable-linger $USER` pro autostart po odhlášení
 
+## Instalace
+
+### Koncový uživatel (systémově)
+
+```bash
+uv pip install --system tray4hermes
+# nebo přes pipx:
+pipx install tray4hermes
+```
+
+Pak povol autostart:
+
+```bash
+# Najdi, kam se .desktop soubor po instalaci dostal
+DESKTOP_FILE=$(python3 -c "import tray4hermes, os; \
+  print(os.path.join(os.path.dirname(tray4hermes.__file__), 'data', 'tray4hermes.desktop'))")
+cp "$DESKTOP_FILE" ~/.config/autostart/tray4hermes.desktop
+# Uprav řádek Exec= tak, aby mířil na nainstalovaný skript tray4hermes
+# (wheel ho instaluje do <prefix>/bin/tray4hermes).
+```
+
+### Vývoj (editable)
+
+```bash
+git clone https://github.com/MoDD0/tray4hermes.git
+cd tray4hermes
+uv pip install --system -e ".[dev]"
+./scripts/dev.sh   # nainstaluje závislosti + spustí testy
+```
+
+Spuštění trayky:
+
+```bash
+# Buď přes nainstalovaný konzolový skript:
+tray4hermes
+
+# Nebo přes watchdog wrapper (restart po pádu):
+./run.sh
+
+# Nebo jako modul:
+python -m tray4hermes
+```
+
+---
+
 ## Podpora platforem
 
 **Primárně vyvíjeno a testováno na Manjaro KDE** (rolling release,
@@ -171,8 +216,9 @@ Plasma 5, `xcb` X11 backend).
 
 **Nativně by to mělo fungovat na každém Linuxu, který má:**
 
-1. **Qt5 + PyQt5 nebo PySide2** (`python -c "from PyQt5.QtWidgets import QSystemTrayIcon; print('OK')"`
-   musí projít)
+1. **Qt5 s PyQt5** (`python -c "from PyQt5.QtWidgets import QSystemTrayIcon; print('OK')"`
+   musí projít). PySide2 podporovaný není — všechny moduly importují
+   přímo PyQt5.
 2. **DBus session bus** (`echo $DBUS_SESSION_BUS_ADDRESS` má být
    nastavený — v desktop session typicky automaticky)
 3. **Implementaci systémové lišty** respektující freedesktop.org SNI spec
@@ -274,13 +320,16 @@ python -c "from PyQt5.QtWidgets import QSystemTrayIcon, QApplication; \
 
 # 2. Zkontroluj, jestli běží DBus
 echo "DBus session bus: $DBUS_SESSION_BUS_ADDRESS"
-dbus-launch --autolaunch=output-file=/tmp/dbus.out
 
-# 3. Zkus explicitní XDG
+# 3. Zkus explicitní XDG a spusť na popředí, ať chyby dojdou do terminálu
 export XDG_CURRENT_DESKTOP=KDE
 export XDG_SESSION_TYPE=x11
-tray4hermes --debug
+python -m tray4hermes
 ```
+
+Přepínač `--debug` neexistuje: tray píše chyby na stderr, takže spuštění
+z terminálu podle návodu výše je celá debugovací výbava. Jediné další
+argumenty jsou `tray4hermes --version` a `tray4hermes --language`.
 
 Pokud `QSystemTrayIcon.isSystemTrayAvailable()` vrátí `False`, je to
 **problém kombinace distro/desktop**, ne bug tray4hermes. Můžeš:
@@ -293,49 +342,6 @@ Chceme, aby to fungovalo **všude**, kde má Hermes Agent šanci běžet.
 Distrospecifické PR jsou proto velmi vítané.
 
 ---
-
-## Instalace
-
-### Koncový uživatel (systémově)
-
-```bash
-uv pip install --system tray4hermes
-# nebo přes pipx:
-pipx install tray4hermes
-```
-
-Pak povol autostart:
-
-```bash
-# Najdi, kam se .desktop soubor po instalaci dostal
-DESKTOP_FILE=$(python3 -c "import tray4hermes, os; \
-  print(os.path.join(os.path.dirname(tray4hermes.__file__), 'data', 'tray4hermes.desktop'))")
-cp "$DESKTOP_FILE" ~/.config/autostart/tray4hermes.desktop
-# Uprav řádek Exec= tak, aby mířil na nainstalovaný skript tray4hermes
-# (wheel ho instaluje do <prefix>/bin/tray4hermes).
-```
-
-### Vývoj (editable)
-
-```bash
-git clone https://github.com/MoDD0/tray4hermes.git
-cd tray4hermes
-uv pip install --system -e ".[dev]"
-./scripts/dev.sh   # nainstaluje závislosti + spustí testy
-```
-
-Spuštění trayky:
-
-```bash
-# Buď přes nainstalovaný konzolový skript:
-tray4hermes
-
-# Nebo přes watchdog wrapper (restart po pádu):
-./run.sh
-
-# Nebo jako modul:
-python -m tray4hermes
-```
 
 ## Bezpečnost
 
@@ -513,8 +519,9 @@ MIT — viz [LICENSE](../LICENSE).
 
 Issues, komentáře, návrhy — všechno vítáno. Ať už je to:
 
-- 🐛 **Bug report** — ideálně s výstupem z `~/.hermes/logs/gateway.log`
-  a z `tray4hermes --debug`
+- 🐛 **Bug report** — ideálně s relevantní částí
+  `~/.hermes/logs/gateway.log` a s tím, co vypíše `python -m tray4hermes`
+  spuštěný z terminálu
 - 💡 **Feature request** — krátký popis, k čemu by to bylo. Nevadí nám
   ani „divoké" nápady (jiný backend, podpora Waylandu, vlastní ikony…).
   Stojí to za diskuzi.

@@ -162,6 +162,51 @@ seconds before the first model call actually succeeds.
 - A running `hermes-gateway.service` under `systemd --user`
 - `loginctl enable-linger $USER` for autostart after logout
 
+## Installation
+
+### End-user (system-wide)
+
+```bash
+uv pip install --system tray4hermes
+# or with pipx:
+pipx install tray4hermes
+```
+
+Then enable autostart:
+
+```bash
+# Find where the .desktop file ended up after pip install
+DESKTOP_FILE=$(python3 -c "import tray4hermes, os; \
+  print(os.path.join(os.path.dirname(tray4hermes.__file__), 'data', 'tray4hermes.desktop'))")
+cp "$DESKTOP_FILE" ~/.config/autostart/tray4hermes.desktop
+# Adjust the Exec= line to point at your installed tray4hermes script
+# (the wheel ships it at <prefix>/bin/tray4hermes).
+```
+
+### Development (editable)
+
+```bash
+git clone https://github.com/MoDD0/tray4hermes.git
+cd tray4hermes
+uv pip install --system -e ".[dev]"
+./scripts/dev.sh   # installs deps + runs tests
+```
+
+Launch the tray:
+
+```bash
+# Either via the installed console script:
+tray4hermes
+
+# Or via the watchdog wrapper (auto-restart on crash):
+./run.sh
+
+# Or as a module:
+python -m tray4hermes
+```
+
+---
+
 ## Platform support
 
 **Primarily developed and tested on Manjaro KDE** (rolling release,
@@ -169,8 +214,9 @@ Plasma 5, `xcb` X11 backend).
 
 **Should work natively on any Linux that has:**
 
-1. **Qt5 + PyQt5 or PySide2** (`python -c "from PyQt5.QtWidgets import QSystemTrayIcon; print('OK')"`
-   should succeed)
+1. **Qt5 with PyQt5** (`python -c "from PyQt5.QtWidgets import QSystemTrayIcon; print('OK')"`
+   should succeed). PySide2 is not supported — every module imports PyQt5
+   directly.
 2. **DBus session bus** (`echo $DBUS_SESSION_BUS_ADDRESS` should be
    set — typically automatic in a desktop session)
 3. **A system tray implementation** respecting the freedesktop.org
@@ -180,16 +226,19 @@ Plasma 5, `xcb` X11 backend).
    alternatives have a slightly different `hermes-gateway` API;
    an adapter in `paths.py` would be needed)
 
-### Tested
+### Distro status
+
+Only one row here is actually tested. The rest is reasoning from how
+close the distro is to that one — useful, but not a promise.
 
 | Distro / DE | Status | Notes |
 |-------------|--------|-------|
-| **Manjaro KDE** | ✅ primary | default platform for development and tests |
-| Arch Linux + KDE | 🟡 should work | practically identical to Manjaro, just package from `extra` not AUR |
-| **Ubuntu + KDE** | 🟡 should work | see below |
-| Fedora + KDE | 🟡 should work | `dnf install python3-pyqt5` |
-| openSUSE + KDE | 🟡 should work | `zypper install python3-PyQt5` |
-| CachyOS KDE | ✅ should work | Arch-based, practically identical |
+| **Manjaro KDE** | ✅ tested | the platform this is developed and tested on |
+| Arch Linux + KDE | 🟡 expected to work | practically identical to Manjaro, just package from `extra` not AUR |
+| CachyOS KDE | 🟡 expected to work | Arch-based, practically identical |
+| **Ubuntu + KDE** | 🟡 expected to work | see below |
+| Fedora + KDE | 🟡 expected to work | `dnf install python3-pyqt5` |
+| openSUSE + KDE | 🟡 expected to work | `zypper install python3-PyQt5` |
 
 ### Ubuntu with Unity / GNOME / others
 
@@ -272,13 +321,16 @@ python -c "from PyQt5.QtWidgets import QSystemTrayIcon, QApplication; \
 
 # 2. Check whether DBus is running
 echo "DBus session bus: $DBUS_SESSION_BUS_ADDRESS"
-dbus-launch --autolaunch=output-file=/tmp/dbus.out
 
-# 3. Try explicit XDG
+# 3. Try explicit XDG, and run in the foreground so errors reach the terminal
 export XDG_CURRENT_DESKTOP=KDE
 export XDG_SESSION_TYPE=x11
-tray4hermes --debug
+python -m tray4hermes
 ```
+
+There is no `--debug` flag: the tray writes its failures to stderr, so
+running it from a terminal as above is the whole debug story. `tray4hermes
+--version` and `tray4hermes --language` are the only other arguments.
 
 If `QSystemTrayIcon.isSystemTrayAvailable()` returns `False`, it's a
 **distro/desktop combo problem**, not a tray4hermes bug. You can:
@@ -291,49 +343,6 @@ We want it to work **everywhere** Hermes Agent has a chance of running.
 So distro-specific PRs are very welcome.
 
 ---
-
-## Installation
-
-### End-user (system-wide)
-
-```bash
-uv pip install --system tray4hermes
-# or with pipx:
-pipx install tray4hermes
-```
-
-Then enable autostart:
-
-```bash
-# Find where the .desktop file ended up after pip install
-DESKTOP_FILE=$(python3 -c "import tray4hermes, os; \
-  print(os.path.join(os.path.dirname(tray4hermes.__file__), 'data', 'tray4hermes.desktop'))")
-cp "$DESKTOP_FILE" ~/.config/autostart/tray4hermes.desktop
-# Adjust the Exec= line to point at your installed tray4hermes script
-# (the wheel ships it at <prefix>/bin/tray4hermes).
-```
-
-### Development (editable)
-
-```bash
-git clone https://github.com/MoDD0/tray4hermes.git
-cd tray4hermes
-uv pip install --system -e ".[dev]"
-./scripts/dev.sh   # installs deps + runs tests
-```
-
-Launch the tray:
-
-```bash
-# Either via the installed console script:
-tray4hermes
-
-# Or via the watchdog wrapper (auto-restart on crash):
-./run.sh
-
-# Or as a module:
-python -m tray4hermes
-```
 
 ## Security
 
@@ -512,8 +521,9 @@ MIT — see [LICENSE](LICENSE).
 
 Issues, comments, suggestions — all welcome. Whether it's:
 
-- 🐛 **Bug report** — ideally with output from
-  `~/.hermes/logs/gateway.log` and `tray4hermes --debug` output
+- 🐛 **Bug report** — ideally with the relevant part of
+  `~/.hermes/logs/gateway.log` and whatever `python -m tray4hermes`
+  prints when run from a terminal
 - 💡 **Feature request** — short description of what it would be
   for. We don't mind "wild" ideas (different backend, Wayland
   support, custom icons…). Worth a discussion.
