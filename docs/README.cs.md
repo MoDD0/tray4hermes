@@ -1,13 +1,13 @@
 # tray4hermes (česky)
 
 <!-- tray4hermes:version -->
-[![version: 2.0.17](https://img.shields.io/badge/version-2.0.17-blue.svg)](https://github.com/MoDD0/tray4hermes)
+[![version: 2.0.18](https://img.shields.io/badge/version-2.0.18-blue.svg)](https://github.com/MoDD0/tray4hermes)
 [![CI](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml/badge.svg)](https://github.com/MoDD0/tray4hermes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-![KDE Plasma lišta s ikonou tray4hermes](images/preview.png)
+![KDE Plasma lišta s ikonou tray4hermes](https://raw.githubusercontent.com/MoDD0/tray4hermes/main/docs/images/preview.png)
 
 *Reálná KDE Plasma 5 lišta — ikona tray4hermes zapadne mezi ostatní SNI
 aplikace. Screenshot z Manjaro KDE session, kde tenhle tray běží
