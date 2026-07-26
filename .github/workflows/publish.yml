@@ -1,0 +1,71 @@
+name: Publish to PyPI
+
+# Publishing runs on a published GitHub release, not on every tag, so
+# creating a tag by mistake cannot ship anything. A PyPI version number
+# can never be reused, so this workflow errs on the side of refusing.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check the tag matches __version__
+        # The release tag is the human's intent; __init__.py is what
+        # actually gets packaged. If they disagree, the wrong version
+        # would go out under the right name — and be unrecoverable.
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(python -c "import re,pathlib; \
+            print(re.search(r'__version__ = \"([^\"]+)\"', \
+            pathlib.Path('src/tray4hermes/__init__.py').read_text()).group(1))")
+          echo "tag=$TAG  package=$PKG"
+          test "$TAG" = "$PKG" || {
+            echo "::error::release tag $TAG does not match __version__ $PKG"
+            exit 1
+          }
+
+      - name: Build
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+
+      - name: Check metadata
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine check dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Upload to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # Kept as a separate job so that only this step holds the OIDC
+    # token — the build, which runs project code, never sees it.
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish via Trusted Publishing
+        # No API token anywhere: PyPI verifies a short-lived OIDC token
+        # issued by GitHub for this repository and workflow.
+        uses: pypa/gh-action-pypi-publish@release/v1
