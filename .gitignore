@@ -37,8 +37,13 @@ coverage.xml
 .vscode/
 *.iml
 
-# Claude Code — lokální nastavení sezení (projektová paměť se verzuje)
-.claude/settings.local.json
+# Claude Code — working notes kept locally, not published.
+# The design docs, conventions and session log live in .claude/ and
+# CLAUDE.md. They are written in Czech, they are notes to self rather
+# than documentation for contributors, and they stay out of the public
+# repository. Contributor-facing docs are README.md and CONTRIBUTING.md.
+.claude/
+CLAUDE.md
 
 # ── Secrets — never commit, even by accident ────────────────────────────────
 # Belt-and-suspenders. tray4hermes itself writes only to
