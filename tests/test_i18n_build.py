@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -194,3 +195,19 @@ def test_verify_assets_passes_when_present(i18n_module, tmp_path: Path) -> None:
     for rel, _label in i18n_module._IMAGE_LOCATIONS:
         (tmp_path / rel).write_bytes(b"x")
     assert i18n_module.verify_assets(tmp_path) == 0
+
+
+def test_compiled_readmes_use_absolute_image_urls() -> None:
+    """PyPI renders the README with no access to the repository.
+
+    A relative path like `docs/images/preview.png` resolves against
+    pypi.org there and shows as a broken image — which is exactly what
+    happened to 2.0.17. GitHub renders absolute raw URLs just as happily
+    as relative ones, so absolute is the form that works in both places.
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    for name in ("README.md", "docs/README.cs.md"):
+        text = (repo_root / name).read_text(encoding="utf-8")
+        refs = re.findall(r"!\[[^\]]*\]\(([^)]+)\)", text)
+        relative = [r for r in refs if not r.startswith(("http://", "https://", "data:"))]
+        assert relative == [], f"{name} has image paths PyPI cannot resolve: {relative}"

@@ -253,16 +253,28 @@ def rewrite_header_banner(md: str, locales: list[Locale], current_code: str) -> 
 # resolve to `images/X.png`.
 _IMAGE_REF_RE = re.compile(r"(!\[[^\]]*\]\()([^)]+)(\))")
 
+# Images are emitted as absolute raw-content URLs so the compiled README
+# renders on PyPI too, not just inside the repository. Pinned to `main`:
+# a tag would freeze screenshots at the release they shipped with, and a
+# stale screenshot is worse than a current one.
+_RAW_CONTENT_BASE = "https://raw.githubusercontent.com/MoDD0/tray4hermes/main/"
+
 
 def _rewrite_image_paths(md: str, target: Path, source: Path, repo_root: Path) -> str:
-    """Rewrite `![](X)` references so the compiled file finds the asset.
+    """Rewrite `![](X)` references into absolute raw-content URLs.
 
     Authors write paths relative to the **repo root** inside
-    `docs/i18n/*.md` (e.g. `docs/images/kde_tray.png`). We resolve them
-    against the repo root, then compute the relative path from the
-    target file's location. Absolute URLs and data URIs pass through.
+    `docs/i18n/*.md` (e.g. `docs/images/preview.png`). Absolute URLs and
+    data URIs pass through untouched.
+
+    These used to be rewritten to a path relative to the compiled file,
+    which reads naturally and works on GitHub. It does not work on PyPI:
+    the description is rendered from the sdist with no access to the
+    repository, so `docs/images/preview.png` resolves against pypi.org
+    and renders as a broken image — as it did for 2.0.17. GitHub is
+    equally happy with absolute raw URLs, so that is the one form that
+    works everywhere the README is displayed.
     """
-    target_dir = target.parent
 
     def _rewrite(match: re.Match[str]) -> str:
         prefix, ref, suffix = match.group(1), match.group(2), match.group(3)
@@ -275,10 +287,7 @@ def _rewrite_image_paths(md: str, target: Path, source: Path, repo_root: Path) -
             rel_to_repo = candidate.relative_to(repo_root)
         except ValueError:
             return match.group(0)
-        rel_to_target = _relative_inside_repo(
-            from_dir=target_dir, to_file=rel_to_repo, repo_root=repo_root
-        )
-        return f"{prefix}{rel_to_target}{suffix}"
+        return f"{prefix}{_RAW_CONTENT_BASE}{rel_to_repo.as_posix()}{suffix}"
 
     return _IMAGE_REF_RE.sub(_rewrite, md)
 
